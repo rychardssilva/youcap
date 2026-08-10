@@ -1,0 +1,14 @@
+app/node_modules/
+app/dist/
+app/data/*.sqlite
+app/data/*.sqlite-*
+app/data/captures/
+app/src-tauri/data/*.sqlite
+app/src-tauri/data/*.sqlite-*
+app/src-tauri/data/captures/
+app/src-tauri/target/
+app/src-tauri/gen/
+docs/
+.env
+.env.*
+!.env.example
