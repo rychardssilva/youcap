@@ -1,4 +1,4 @@
-import { CheckCircle2, Info, X, XCircle } from "lucide-react";
+﻿import { CheckCircle2, Info, X, XCircle } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { useToastStore, type AppToast } from "@/stores/toast-store";
@@ -16,7 +16,7 @@ function ToastItem({ toast }: { toast: AppToast }) {
   return (
     <div
       className={cn(
-        "pointer-events-auto flex w-[360px] items-start gap-3 rounded-md border bg-popover p-4 text-popover-foreground shadow-sm",
+        "pointer-events-auto flex w-[360px] items-start gap-3 rounded-md border bg-popover p-4 text-popover-foreground shadow-lg shadow-black/10",
         toast.variant === "success" && "border-primary/35",
         toast.variant === "error" && "border-destructive/40",
       )}
@@ -33,13 +33,15 @@ function ToastItem({ toast }: { toast: AppToast }) {
       />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium">{toast.title}</p>
-        {toast.description ? <p className="mt-1 text-sm text-muted-foreground">{toast.description}</p> : null}
+        {toast.description ? (
+          <p className="mt-1 text-sm text-muted-foreground">{toast.description}</p>
+        ) : null}
       </div>
       <button
-        className="rounded-md p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="rounded-md p-1 text-muted-foreground transition hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         type="button"
         onClick={() => removeToast(toast.id)}
-        aria-label="Fechar notificacao"
+        aria-label="Fechar notificação"
       >
         <X className="size-4" aria-hidden="true" />
       </button>

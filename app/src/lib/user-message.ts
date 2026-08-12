@@ -1,7 +1,7 @@
 const knownMessages: Array<[RegExp, string]> = [
   [
     /query text.*incomplete|text.*incomplete|incomplete query/i,
-    "O texto reconhecido parece incompleto. Confira o texto capturado ou selecione uma area maior.",
+    "O texto reconhecido parece incompleto. Confira o texto capturado ou selecione uma área maior.",
   ],
   [
     /query text|source text|captured text|input text/i,
@@ -25,7 +25,7 @@ const knownMessages: Array<[RegExp, string]> = [
   ],
   [
     /truncation/i,
-    "A captura pode ter cortado parte do texto. Tente selecionar uma area um pouco maior.",
+    "A captura pode ter cortado parte do texto. Tente selecionar uma área um pouco maior.",
   ],
   [
     /quota|resource_exhausted|rate limit|exceeded your current quota/i,
@@ -33,43 +33,43 @@ const knownMessages: Array<[RegExp, string]> = [
   ],
   [
     /api key.*missing|gemini api key ausente|api key ausente/i,
-    "Configure a chave do Gemini para receber traducao e contexto por IA.",
+    "Configure a chave do Gemini para receber tradução e contexto por IA.",
   ],
   [
     /invalid api key|credential|credencial|permission_denied|unauthorized|forbidden/i,
-    "A chave de API parece invalida ou sem permissao. Confira a chave nas configuracoes.",
+    "A chave de API parece inválida ou sem permissão. Confira a chave nas configurações.",
   ],
   [
     /timeout|demorou demais/i,
-    "A operacao demorou demais para responder. Tente novamente ou selecione uma area menor.",
+    "A operação demorou demais para responder. Tente novamente ou selecione uma área menor.",
   ],
   [
-    /failed to fetch|network|dns|connection|conectar|conexao/i,
-    "Nao foi possivel conectar ao servico externo. Confira sua internet e tente novamente.",
+    /failed to fetch|network|dns|connection|conectar|conexao|conexão/i,
+    "Não foi possível conectar ao serviço externo. Confira sua internet e tente novamente.",
   ],
   [
     /json|invalid_lookup_response|resposta.*invalida/i,
-    "A IA respondeu em um formato inesperado. A traducao basica sera usada quando possivel.",
+    "A IA respondeu em um formato inesperado. A tradução básica será usada quando possível.",
   ],
   [
     /ocr\.space.*recusou|ocr.*credential|ocr.*credencial/i,
-    "O OCR recusou a imagem ou a chave configurada. Confira a chave do OCR.space nas configuracoes.",
+    "O OCR recusou a imagem ou a chave configurada. Confira a chave do OCR.space nas configurações.",
   ],
   [
     /falha ao processar ocr|ocr.*processing/i,
-    "Nao foi possivel reconhecer o texto nessa imagem. Tente selecionar uma area mais nitida.",
+    "Não foi possível reconhecer o texto nessa imagem. Tente selecionar uma área mais nítida.",
   ],
   [
     /shortcut|atalho|already registered|hotkey/i,
-    "Nao foi possivel registrar esse atalho. Tente outra combinacao nas configuracoes.",
+    "Não foi possível registrar esse atalho. Tente outra combinação nas configurações.",
   ],
   [
     /database|sqlite|migration|constraint|unique/i,
-    "Nao foi possivel acessar ou atualizar o banco local. Tente novamente e confira se o app tem permissao de escrita.",
+    "Não foi possível acessar ou atualizar o banco local. Tente novamente e confira se o app tem permissão de escrita.",
   ],
   [
-    /monitor|screen|display|permission|permissao|access denied/i,
-    "Nao foi possivel acessar a tela para captura. Confira permissoes do sistema e tente novamente.",
+    /monitor|screen|display|permission|permissao|permissão|access denied/i,
+    "Não foi possível acessar a tela para captura. Confira permissões do sistema e tente novamente.",
   ],
 ];
 
@@ -77,7 +77,7 @@ export function userMessage(message: string | null | undefined) {
   const rawMessage = message?.trim();
 
   if (!rawMessage) {
-    return "Nao foi possivel concluir a operacao.";
+    return "Não foi possível concluir a operação.";
   }
 
   for (const [pattern, translatedMessage] of knownMessages) {

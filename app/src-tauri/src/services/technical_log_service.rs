@@ -20,7 +20,7 @@ fn append_log(app_handle: &AppHandle, line: &str) -> std::io::Result<()> {
     let mut file = fs::OpenOptions::new()
         .create(true)
         .append(true)
-        .open(log_dir.join("immersion-vocabulary.log"))?;
+        .open(log_dir.join("yocab.log"))?;
     file.write_all(line.as_bytes())
 }
 

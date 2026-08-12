@@ -12,7 +12,7 @@ pub async fn initialize_database(app_handle: &AppHandle) -> AppResult<SqlitePool
     let data_dir = database_dir(app_handle)?;
     fs::create_dir_all(&data_dir)?;
 
-    let database_path = data_dir.join(database_file_name());
+    let database_path = database_path(&data_dir)?;
     let options = SqliteConnectOptions::new()
         .filename(&database_path)
         .create_if_missing(true)
@@ -55,6 +55,21 @@ fn database_file_name() -> &'static str {
     if cfg!(debug_assertions) {
         "banco_de_dados.sqlite"
     } else {
-        "immersion-vocabulary.sqlite"
+        "yocab.sqlite"
     }
+}
+
+fn database_path(data_dir: &PathBuf) -> AppResult<PathBuf> {
+    let current_path = data_dir.join(database_file_name());
+
+    if cfg!(debug_assertions) || current_path.exists() {
+        return Ok(current_path);
+    }
+
+    let legacy_path = data_dir.join(concat!("immersion", "-vocabulary.sqlite"));
+    if legacy_path.exists() {
+        fs::rename(&legacy_path, &current_path)?;
+    }
+
+    Ok(current_path)
 }

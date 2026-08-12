@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
   BookOpenCheck,
@@ -201,7 +201,7 @@ export function ReviewPage() {
     } catch (error) {
       addToast({
         variant: "error",
-        title: "Erro ao registrar revisao",
+        title: "Erro ao registrar revisão",
         description: userMessage(errorMessage(error)),
       });
     } finally {
@@ -239,10 +239,10 @@ export function ReviewPage() {
 
   if (status === "loading") {
     return (
-      <div className="flex min-h-80 items-center justify-center rounded-md border bg-card p-6">
+      <div className="surface flex min-h-80 items-center justify-center p-6">
         <div className="flex items-center gap-3 text-muted-foreground">
           <Loader2 className="size-5 animate-spin text-primary" aria-hidden="true" />
-          <span>Preparando fila de revisao...</span>
+          <span>Preparando fila de revisão...</span>
         </div>
       </div>
     );
@@ -252,8 +252,8 @@ export function ReviewPage() {
     return (
       <EmptyState
         icon={XCircle}
-        title="Nao foi possivel carregar a revisao"
-        description="Tente abrir a pagina novamente depois."
+        title="Não foi possível carregar a revisão"
+        description="Tente abrir a página novamente depois."
       />
     );
   }
@@ -263,18 +263,18 @@ export function ReviewPage() {
       <EmptyState
         icon={BookOpenCheck}
         title="Nenhuma palavra para revisar"
-        description="Salve palavras na biblioteca para montar sessoes de revisao."
+        description="Salve palavras na biblioteca para montar sessões de revisão."
       />
     );
   }
 
   if (!currentWord) {
     return (
-      <section className="mx-auto max-w-2xl rounded-md border bg-card p-6 text-card-foreground">
+      <section className="surface mx-auto max-w-2xl p-6">
         <div className="flex items-center gap-3">
           <CheckCircle2 className="size-8 text-primary" aria-hidden="true" />
           <div>
-            <h2 className="text-xl font-semibold">Sessao concluida</h2>
+            <h2 className="text-xl font-medium">Sessão concluída</h2>
             <p className="text-sm text-muted-foreground">
               {stats.reviewed} {stats.reviewed === 1 ? "palavra revisada" : "palavras revisadas"}.
             </p>
@@ -296,10 +296,10 @@ export function ReviewPage() {
 
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-      <section className="space-y-5">
+      <section className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-sm text-muted-foreground">Sessao de revisao</p>
+            <p className="text-sm text-muted-foreground">Sessão de revisão</p>
             <h2 className="text-2xl font-semibold">{progressLabel}</h2>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -318,31 +318,31 @@ export function ReviewPage() {
           </div>
         </div>
 
-        <section className="rounded-md border bg-card p-6 text-card-foreground">
+        <section className="surface p-6">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm text-muted-foreground">{card.promptLabel}</p>
               <h3 className="mt-2 break-words text-3xl font-semibold">{card.prompt}</h3>
             </div>
             {mode === "image" ? (
-              <ImageIcon className="size-7 text-primary" aria-hidden="true" />
+              <ImageIcon className="size-7 text-muted-foreground" aria-hidden="true" />
             ) : null}
           </div>
 
           {mode === "image" ? (
             <div className="mt-5">
               {isLoadingImages ? (
-                <div className="flex h-44 items-center justify-center rounded-md border bg-background text-muted-foreground">
+                <div className="surface-soft flex h-44 items-center justify-center text-muted-foreground">
                   <Loader2 className="size-5 animate-spin" aria-hidden="true" />
                 </div>
               ) : referenceImages.length > 0 ? (
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                   {referenceImages.map((imageUrl) => (
-                    <div key={imageUrl} className="overflow-hidden rounded-md border bg-background">
+                    <div key={imageUrl} className="surface overflow-hidden">
                       <img
                         className="aspect-[4/3] w-full object-cover"
                         src={imageUrl}
-                        alt={`Imagem de revisao para ${currentWord.term}`}
+                        alt={`Imagem de revisão para ${currentWord.term}`}
                         loading="lazy"
                         onError={(event) => {
                           event.currentTarget.closest("div")?.remove();
@@ -352,7 +352,7 @@ export function ReviewPage() {
                   ))}
                 </div>
               ) : (
-                <div className="flex h-36 items-center justify-center rounded-md border bg-background text-center text-sm text-muted-foreground">
+                <div className="surface-soft flex h-36 items-center justify-center text-center text-sm text-muted-foreground">
                   Nenhuma imagem encontrada para esta palavra.
                 </div>
               )}
@@ -360,13 +360,13 @@ export function ReviewPage() {
           ) : null}
 
           {mode === "en_to_pt" || mode === "pt_to_en" || mode === "image" ? (
-            <div className="mt-5 rounded-md border bg-background p-4">
+            <div className="surface-soft mt-5 p-4">
               <label className="block text-sm">
                 <span className="text-muted-foreground">
-                  {mode === "pt_to_en" ? "Sua traducao em ingles" : "Sua traducao em portugues"}
+                  {mode === "pt_to_en" ? "Sua tradução em inglês" : "Sua tradução em português"}
                 </span>
                 <input
-                  className="mt-2 h-11 w-full rounded-md border bg-card px-3 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="field mt-2 w-full text-base"
                   value={answerInput}
                   placeholder="Digite sua resposta"
                   onChange={(event) => {
@@ -412,7 +412,7 @@ export function ReviewPage() {
             </div>
           ) : null}
 
-          <div className="mt-6 rounded-md border bg-background p-4">
+          <div className="surface-soft mt-6 p-4">
             {answerVisible ? (
               <div className="space-y-3">
                 <div>
@@ -467,13 +467,13 @@ export function ReviewPage() {
                 isLoading={isSaving}
                 onClick={() => void submitReview("hard")}
               >
-                Dificil
+                Difícil
               </Button>
               <Button isLoading={isSaving} onClick={() => void submitReview("good")}>
                 Bom
               </Button>
               <Button isLoading={isSaving} onClick={() => void submitReview("easy")}>
-                Facil
+                Fácil
               </Button>
             </div>
           </div>
@@ -481,18 +481,18 @@ export function ReviewPage() {
       </section>
 
       <aside className="space-y-5">
-        <section className="rounded-md border bg-card p-5 text-card-foreground">
-          <h3 className="font-semibold">Resumo da sessao</h3>
+        <section className="surface p-5">
+          <h3 className="font-medium">Resumo da sessão</h3>
           <StatsGrid stats={stats} />
         </section>
 
-        <section className="rounded-md border bg-card p-5 text-card-foreground">
-          <h3 className="font-semibold">Palavra atual</h3>
+        <section className="surface p-5">
+          <h3 className="font-medium">Palavra atual</h3>
           <dl className="mt-4 space-y-3 text-sm">
             <SummaryRow label="Termo" value={currentWord.term} />
-            <SummaryRow label="Traducao" value={currentWord.main_translation ?? "Nao registrada"} />
+            <SummaryRow label="Tradução" value={currentWord.main_translation ?? "Não registrada"} />
             <SummaryRow label="Status" value={statusLabel(currentWord.status)} />
-            <SummaryRow label="Aparicoes" value={`${currentWord.lookups_count}`} />
+            <SummaryRow label="Aparições" value={`${currentWord.lookups_count}`} />
           </dl>
           <div className="mt-4 grid gap-2">
             <Button
@@ -519,15 +519,15 @@ export function ReviewPage() {
 function buildReviewCard(mode: ReviewMode, word: WordListItem | null, details: WordDetails | null) {
   const term = word?.term ?? "";
   const translation =
-    word?.main_translation ?? details?.translations[0]?.translation ?? "Sem traducao";
+    word?.main_translation ?? details?.translations[0]?.translation ?? "Sem tradução";
   const context = word?.latest_context ?? details?.contexts[0]?.original_text ?? null;
   const example = details?.examples[0]?.original_text ?? null;
 
   if (mode === "pt_to_en") {
     return {
-      promptLabel: "Traducao em portugues",
+      promptLabel: "Tradução em português",
       prompt: translation,
-      answerLabel: "Termo em ingles",
+      answerLabel: "Termo em inglês",
       answer: term,
       context,
       example,
@@ -538,7 +538,7 @@ function buildReviewCard(mode: ReviewMode, word: WordListItem | null, details: W
     return {
       promptLabel: "Contexto original",
       prompt: context ?? term,
-      answerLabel: "Palavra e traducao",
+      answerLabel: "Palavra e tradução",
       answer: `${term} - ${translation}`,
       context,
       example,
@@ -547,9 +547,9 @@ function buildReviewCard(mode: ReviewMode, word: WordListItem | null, details: W
 
   if (mode === "image") {
     return {
-      promptLabel: "Revisao por imagem",
-      prompt: "Qual e a traducao desta imagem?",
-      answerLabel: "Traducao",
+      promptLabel: "Revisão por imagem",
+      prompt: "Qual é a tradução desta imagem?",
+      answerLabel: "Tradução",
       answer: translation,
       context,
       example,
@@ -557,9 +557,9 @@ function buildReviewCard(mode: ReviewMode, word: WordListItem | null, details: W
   }
 
   return {
-    promptLabel: "Termo em ingles",
+    promptLabel: "Termo em inglês",
     prompt: term,
-    answerLabel: "Traducao",
+    answerLabel: "Tradução",
     answer: translation,
     context,
     example,
@@ -673,7 +673,7 @@ function StatsGrid({ stats }: { stats: SessionStats }) {
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border p-3">
+    <div className="surface-soft p-3">
       <dt className="text-muted-foreground">{label}</dt>
       <dd className="mt-1 font-medium">{value}</dd>
     </div>
@@ -684,7 +684,7 @@ function statusLabel(status: string) {
   const labels: Record<string, string> = {
     new: "Nova",
     learning: "Estudando",
-    difficult: "Dificil",
+    difficult: "Difícil",
     known: "Conhecida",
     mastered: "Dominada",
     archived: "Arquivada",

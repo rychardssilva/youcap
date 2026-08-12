@@ -273,7 +273,7 @@ fn translate_ocr_provider_message(message: &str) -> String {
         || lower_message.contains("apikey")
         || lower_message.contains("credential")
     {
-        return "A chave do OCR.space parece invalida. Confira a chave nas configuracoes."
+        return "A chave do OCR.space parece inválida. Confira a chave nas configurações."
             .to_string();
     }
 

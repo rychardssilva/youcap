@@ -1,8 +1,8 @@
 [package]
 name = "app"
 version = "0.1.0"
-description = "Aplicativo desktop para capturar, traduzir e salvar vocabulario de imersao."
-authors = ["Immersion Vocabulary"]
+description = "Aplicativo desktop para capturar, traduzir e salvar vocabulário de leitura."
+authors = ["Yocab"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

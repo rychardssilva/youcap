@@ -2,6 +2,7 @@ use sqlx::{Sqlite, SqlitePool, Transaction};
 use uuid::Uuid;
 
 use crate::{
+    dto::lookup_dto::LookupLexicalRelationDto,
     dto::word_dto::{
         SearchWordsResponse, WordContextDto, WordDetailsDto, WordExampleDto, WordHistorySummaryDto,
         WordLexicalRelationDto, WordListItemDto, WordLookupDto, WordPersonalNoteDto,
@@ -87,7 +88,7 @@ pub async fn create_or_update_word_with_source(
 pub async fn list_words(pool: &SqlitePool) -> AppResult<Vec<Word>> {
     let words = sqlx::query_as::<_, Word>(
         r#"
-        SELECT id, term, normalized_term, language, pronunciation, ipa, part_of_speech,
+        SELECT id, term, normalized_term, language, part_of_speech,
                difficulty, status, frequency_rank, frequency_band, created_at, updated_at
         FROM words
         ORDER BY updated_at DESC, term ASC
@@ -131,8 +132,8 @@ pub async fn search_words(
             sqlx::query_as::<_, WordListItemDto>(
                 r#"
                 SELECT
-                  w.id, w.term, w.normalized_term, w.language, w.pronunciation, w.ipa,
-                  w.part_of_speech, w.difficulty, w.status, w.frequency_rank, w.frequency_band,
+                  w.id, w.term, w.normalized_term, w.language, w.part_of_speech,
+                  w.difficulty, w.status, w.frequency_rank, w.frequency_band,
                   w.created_at, w.updated_at,
                   (
                     SELECT tr.translation
@@ -173,8 +174,8 @@ pub async fn search_words(
             sqlx::query_as::<_, WordListItemDto>(
                 r#"
                 SELECT
-                  w.id, w.term, w.normalized_term, w.language, w.pronunciation, w.ipa,
-                  w.part_of_speech, w.difficulty, w.status, w.frequency_rank, w.frequency_band,
+                  w.id, w.term, w.normalized_term, w.language, w.part_of_speech,
+                  w.difficulty, w.status, w.frequency_rank, w.frequency_band,
                   w.created_at, w.updated_at,
                   (
                     SELECT tr.translation
@@ -215,8 +216,8 @@ pub async fn search_words(
             sqlx::query_as::<_, WordListItemDto>(
                 r#"
                 SELECT
-                  w.id, w.term, w.normalized_term, w.language, w.pronunciation, w.ipa,
-                  w.part_of_speech, w.difficulty, w.status, w.frequency_rank, w.frequency_band,
+                  w.id, w.term, w.normalized_term, w.language, w.part_of_speech,
+                  w.difficulty, w.status, w.frequency_rank, w.frequency_band,
                   w.created_at, w.updated_at,
                   (
                     SELECT tr.translation
@@ -422,8 +423,6 @@ pub async fn update_basic_details(
     translation: Option<&str>,
     meaning: Option<&str>,
     status: Option<&str>,
-    pronunciation: Option<&str>,
-    ipa: Option<&str>,
     part_of_speech: Option<&str>,
     difficulty: Option<i64>,
     frequency_rank: Option<i64>,
@@ -451,25 +450,17 @@ pub async fn update_basic_details(
         SET term = COALESCE(?1, term),
             normalized_term = COALESCE(?2, normalized_term),
             status = COALESCE(?3, status),
-            pronunciation = COALESCE(?4, pronunciation),
-            ipa = COALESCE(?5, ipa),
-            part_of_speech = COALESCE(?6, part_of_speech),
-            difficulty = COALESCE(?7, difficulty),
-            frequency_rank = COALESCE(?8, frequency_rank),
-            frequency_band = COALESCE(?9, frequency_band),
+            part_of_speech = COALESCE(?4, part_of_speech),
+            difficulty = COALESCE(?5, difficulty),
+            frequency_rank = COALESCE(?6, frequency_rank),
+            frequency_band = COALESCE(?7, frequency_band),
             updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?10
+        WHERE id = ?8
         "#,
     )
     .bind(term.map(str::trim).filter(|value| !value.is_empty()))
     .bind(normalized_term)
     .bind(status.map(str::trim).filter(|value| !value.is_empty()))
-    .bind(
-        pronunciation
-            .map(str::trim)
-            .filter(|value| !value.is_empty()),
-    )
-    .bind(ipa.map(str::trim).filter(|value| !value.is_empty()))
     .bind(
         part_of_speech
             .map(str::trim)
@@ -670,6 +661,48 @@ pub async fn count_words(pool: &SqlitePool) -> AppResult<i64> {
         .await?;
 
     Ok(count)
+}
+
+pub async fn upsert_lexical_relations(
+    pool: &SqlitePool,
+    word_id: &str,
+    relation_type: &str,
+    relations: &[LookupLexicalRelationDto],
+    source: &str,
+) -> AppResult<()> {
+    for relation in relations.iter().take(8) {
+        let term = relation.term.trim();
+        if term.is_empty() {
+            continue;
+        }
+
+        sqlx::query(
+            r#"
+            INSERT INTO lexical_relations (id, word_id, term, relation_type, translation, source)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+            ON CONFLICT(word_id, relation_type, term)
+            DO UPDATE SET
+              translation = COALESCE(excluded.translation, lexical_relations.translation),
+              source = excluded.source
+            "#,
+        )
+        .bind(Uuid::new_v4().to_string())
+        .bind(word_id)
+        .bind(term)
+        .bind(relation_type)
+        .bind(
+            relation
+                .translation
+                .as_deref()
+                .map(str::trim)
+                .filter(|value| !value.is_empty()),
+        )
+        .bind(source)
+        .execute(pool)
+        .await?;
+    }
+
+    Ok(())
 }
 
 async fn replace_lexical_relations(
@@ -917,7 +950,7 @@ async fn find_by_normalized_term<'a>(
 ) -> AppResult<Word> {
     let word = sqlx::query_as::<_, Word>(
         r#"
-        SELECT id, term, normalized_term, language, pronunciation, ipa, part_of_speech,
+        SELECT id, term, normalized_term, language, part_of_speech,
                difficulty, status, frequency_rank, frequency_band, created_at, updated_at
         FROM words
         WHERE normalized_term = ?1 AND language = ?2
@@ -934,7 +967,7 @@ async fn find_by_normalized_term<'a>(
 async fn find_by_id(pool: &SqlitePool, word_id: &str) -> AppResult<Option<Word>> {
     let word = sqlx::query_as::<_, Word>(
         r#"
-        SELECT id, term, normalized_term, language, pronunciation, ipa, part_of_speech,
+        SELECT id, term, normalized_term, language, part_of_speech,
                difficulty, status, frequency_rank, frequency_band, created_at, updated_at
         FROM words
         WHERE id = ?1

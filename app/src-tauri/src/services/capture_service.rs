@@ -43,7 +43,7 @@ pub fn open_capture_window(app_handle: &AppHandle, state: &AppState) -> AppResul
                 let _ = end_capture(state);
                 return Err(AppError::new(
                     "capture_error",
-                    "Falha ao acessar estado da sessao de captura.",
+                    "Falha ao acessar estado da sessão de captura.",
                 ));
             }
         };
@@ -197,13 +197,13 @@ pub fn current_capture_session(state: &AppState) -> AppResult<CaptureSession> {
     let current_session = state.capture_session.lock().map_err(|_| {
         AppError::new(
             "capture_error",
-            "Falha ao acessar estado da sessao de captura.",
+            "Falha ao acessar estado da sessão de captura.",
         )
     })?;
 
     current_session
         .clone()
-        .ok_or_else(|| AppError::new("capture_error", "Nenhuma sessao de captura foi iniciada."))
+        .ok_or_else(|| AppError::new("capture_error", "Nenhuma sessão de captura foi iniciada."))
 }
 
 pub fn cancel_capture(app_handle: &AppHandle, state: &AppState) -> AppResult<()> {
@@ -327,7 +327,7 @@ fn clear_capture_session(state: &AppState) -> AppResult<()> {
     let mut current_session = state.capture_session.lock().map_err(|_| {
         AppError::new(
             "capture_error",
-            "Falha ao acessar estado da sessao de captura.",
+            "Falha ao acessar estado da sessão de captura.",
         )
     })?;
     *current_session = None;

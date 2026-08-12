@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { FileText, Loader2, MessageSquareText, RotateCcw, X } from "lucide-react";
 
@@ -95,7 +95,7 @@ export function OcrReview() {
 
   async function handleSendToLookup() {
     if (!text.trim()) {
-      setError("O texto reconhecido nao pode ficar vazio.");
+      setError("O texto reconhecido não pode ficar vazio.");
       return;
     }
 
@@ -111,7 +111,7 @@ export function OcrReview() {
   if (status === "error") {
     return (
       <main className="min-h-screen bg-background p-4 text-foreground">
-        <ErrorState message={userMessage(error ?? "Nao foi possivel reconhecer o texto.")} />
+        <ErrorState message={userMessage(error ?? "Não foi possível reconhecer o texto.")} />
       </main>
     );
   }
@@ -124,7 +124,7 @@ export function OcrReview() {
             <Loader2 className="size-5 animate-spin text-primary" aria-hidden="true" />
             <div>
               <p className="font-semibold">Reconhecendo texto</p>
-              <p className="mt-1 text-sm text-muted-foreground">Processando area capturada...</p>
+              <p className="mt-1 text-sm text-muted-foreground">Processando área capturada...</p>
             </div>
           </div>
         </div>

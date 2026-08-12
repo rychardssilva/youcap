@@ -9,7 +9,7 @@ type ThemeStore = {
   toggleTheme: () => void;
 };
 
-const storageKey = "immersion-vocabulary-theme";
+const storageKey = "yocab-theme";
 
 function getStoredTheme(): Theme {
   if (typeof window === "undefined") {

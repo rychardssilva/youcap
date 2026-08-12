@@ -2,6 +2,6 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the desktop windows",
-  "windows": ["main", "capture-overlay"],
+  "windows": ["main", "capture-overlay", "ocr-review", "lookup-popup"],
   "permissions": ["core:default", "opener:default"]
 }

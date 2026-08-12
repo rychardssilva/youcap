@@ -5,6 +5,11 @@ export const lookupExampleSchema = z.object({
   translated_text: z.string().nullable(),
 });
 
+export const lookupLexicalRelationSchema = z.object({
+  term: z.string(),
+  translation: z.string().nullable(),
+});
+
 export const lookupResultSchema = z.object({
   query: z.string(),
   word: z.string(),
@@ -13,9 +18,9 @@ export const lookupResultSchema = z.object({
   meaning_translation: z.string().nullable().optional(),
   contextual_explanation: z.string(),
   contextual_explanation_translation: z.string().nullable().optional(),
-  pronunciation: z.string().nullable(),
-  ipa: z.string().nullable(),
   part_of_speech: z.string().nullable(),
+  synonyms: z.array(lookupLexicalRelationSchema).default([]),
+  antonyms: z.array(lookupLexicalRelationSchema).default([]),
   reference_image_url: z.string().nullable().optional(),
   examples: z.array(lookupExampleSchema),
   source: z.string(),

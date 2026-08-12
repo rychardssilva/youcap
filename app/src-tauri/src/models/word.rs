@@ -7,8 +7,6 @@ pub struct Word {
     pub term: String,
     pub normalized_term: String,
     pub language: String,
-    pub pronunciation: Option<String>,
-    pub ipa: Option<String>,
     pub part_of_speech: Option<String>,
     pub difficulty: i64,
     pub status: String,

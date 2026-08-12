@@ -23,8 +23,8 @@ use commands::ocr_commands::{
 };
 use commands::settings_commands::{list_settings, upsert_setting};
 use commands::vocabulary_commands::{
-    create_word, get_reference_images, get_related_words, get_word_details, list_words,
-    search_words, update_word_details,
+    create_word, ensure_lexical_relations, get_reference_images, get_related_words,
+    get_word_details, list_words, search_words, update_word_details,
 };
 use services::{capture_service::DEFAULT_CAPTURE_SHORTCUT, technical_log_service};
 use state::AppState;
@@ -101,6 +101,7 @@ pub fn run() {
             list_words,
             search_words,
             get_word_details,
+            ensure_lexical_relations,
             get_reference_images,
             get_related_words,
             update_word_details,

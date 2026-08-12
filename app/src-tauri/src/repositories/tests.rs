@@ -353,8 +353,6 @@ async fn update_word_details_adds_manual_translation_context_and_status() {
             translation: Some("ficar sem".to_string()),
             meaning: Some("Usada em expressoes como run out of time.".to_string()),
             status: Some("learning".to_string()),
-            pronunciation: Some("Audio de pronuncia: https://example.test/run.mp3".to_string()),
-            ipa: Some("/run/".to_string()),
             part_of_speech: Some("verb".to_string()),
             difficulty: Some(3),
             frequency_rank: Some(120),
@@ -375,7 +373,6 @@ async fn update_word_details_adds_manual_translation_context_and_status() {
     .unwrap();
 
     assert_eq!(details.word.status, "learning");
-    assert_eq!(details.word.ipa.as_deref(), Some("/run/"));
     assert_eq!(details.word.part_of_speech.as_deref(), Some("verb"));
     assert_eq!(details.word.difficulty, 3);
     assert_eq!(details.word.frequency_rank, Some(120));
@@ -404,8 +401,6 @@ async fn update_word_details_adds_manual_translation_context_and_status() {
             translation: Some("esgotar".to_string()),
             meaning: Some("Novo contexto manual.".to_string()),
             status: Some("known".to_string()),
-            pronunciation: Some("Audio de pronuncia: https://example.test/run.mp3".to_string()),
-            ipa: Some("/run/".to_string()),
             part_of_speech: Some("verb".to_string()),
             difficulty: Some(2),
             frequency_rank: None,
@@ -497,7 +492,7 @@ async fn settings_can_be_created_updated_and_validated() {
 }
 
 #[tokio::test]
-async fn mvp_settings_validate_theme_language_providers_and_shortcut() {
+async fn settings_validate_theme_language_providers_and_shortcut() {
     let pool = test_pool().await;
 
     settings_service::upsert_setting(
@@ -599,9 +594,9 @@ async fn lookup_cache_persists_complete_result() {
         contextual_explanation_translation: Some(
             "A pessoa nao conseguiu terminar algo antes de um limite.".to_string(),
         ),
-        pronunciation: None,
-        ipa: None,
         part_of_speech: None,
+        synonyms: Vec::new(),
+        antonyms: Vec::new(),
         reference_image_url: None,
         examples: vec![LookupExampleDto {
             original_text: "I ran out of time".to_string(),
@@ -627,8 +622,7 @@ async fn lookup_cache_persists_complete_result() {
 
 #[tokio::test]
 async fn data_persists_after_reopening_database_file() {
-    let database_path =
-        std::env::temp_dir().join(format!("immersion-vocabulary-{}.sqlite", Uuid::new_v4()));
+    let database_path = std::env::temp_dir().join(format!("yocab-{}.sqlite", Uuid::new_v4()));
 
     {
         let pool = file_pool(&database_path).await;

@@ -4,7 +4,7 @@ use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use crate::{
-    dto::lookup_dto::{LookupExampleDto, LookupResultDto},
+    dto::lookup_dto::{LookupExampleDto, LookupLexicalRelationDto, LookupResultDto},
     errors::{AppError, AppResult},
     models::word::Word,
     providers::{ai::gemini_provider, translation::mymemory_provider},
@@ -58,15 +58,11 @@ pub async fn save_lookup_result(pool: &SqlitePool, result: &LookupResultDto) -> 
     sqlx::query(
         r#"
         UPDATE words
-        SET pronunciation = ?1,
-            ipa = ?2,
-            part_of_speech = ?3,
+        SET part_of_speech = ?1,
             updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?4
+        WHERE id = ?2
         "#,
     )
-    .bind(&result.pronunciation)
-    .bind(&result.ipa)
     .bind(&result.part_of_speech)
     .bind(&word.id)
     .execute(pool)
@@ -88,9 +84,53 @@ pub async fn save_lookup_result(pool: &SqlitePool, result: &LookupResultDto) -> 
         .await?;
     }
 
+    save_lexical_relations(pool, &word.id, "synonym", &result.synonyms, &result.source).await?;
+    save_lexical_relations(pool, &word.id, "antonym", &result.antonyms, &result.source).await?;
     save_phrase_words(pool, result, &word.id).await?;
 
     Ok(word)
+}
+
+async fn save_lexical_relations(
+    pool: &SqlitePool,
+    word_id: &str,
+    relation_type: &str,
+    relations: &[LookupLexicalRelationDto],
+    source: &str,
+) -> AppResult<()> {
+    for relation in relations.iter().take(8) {
+        let term = relation.term.trim();
+        if term.is_empty() {
+            continue;
+        }
+
+        sqlx::query(
+            r#"
+            INSERT INTO lexical_relations (id, word_id, term, relation_type, translation, source)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+            ON CONFLICT(word_id, relation_type, term)
+            DO UPDATE SET
+              translation = COALESCE(excluded.translation, lexical_relations.translation),
+              source = excluded.source
+            "#,
+        )
+        .bind(Uuid::new_v4().to_string())
+        .bind(word_id)
+        .bind(term)
+        .bind(relation_type)
+        .bind(
+            relation
+                .translation
+                .as_deref()
+                .map(str::trim)
+                .filter(|value| !value.is_empty()),
+        )
+        .bind(source)
+        .execute(pool)
+        .await?;
+    }
+
+    Ok(())
 }
 
 async fn save_phrase_words(
@@ -188,7 +228,7 @@ async fn record_lookup(
 async fn enrich_with_free_translation_if_needed(result: &mut LookupResultDto) {
     let translation_unavailable = result
         .translation
-        .eq_ignore_ascii_case("Traducao indisponivel");
+        .eq_ignore_ascii_case("Tradução indisponível");
     let translation_too_short =
         is_translation_suspiciously_short(&result.query, &result.translation);
 
@@ -203,14 +243,14 @@ async fn enrich_with_free_translation_if_needed(result: &mut LookupResultDto) {
 
             if translation_unavailable {
                 result.contextual_explanation =
-                    "Traducao gratuita gerada pelo MyMemory. Configure o Gemini para uma explicacao contextual mais completa."
+                    "Tradução gratuita gerada pelo MyMemory. Configure o Gemini para uma explicação contextual mais completa."
                         .to_string();
                 result.contextual_explanation_translation = Some(
-                    "Traducao gratuita gerada pelo MyMemory. Configure o Gemini para uma explicacao contextual mais completa."
+                    "Tradução gratuita gerada pelo MyMemory. Configure o Gemini para uma explicação contextual mais completa."
                         .to_string(),
                 );
                 result.meaning_translation =
-                    Some("Nao foi possivel gerar o significado completo sem o Gemini.".to_string());
+                    Some("Não foi possível gerar o significado completo sem o Gemini.".to_string());
             }
 
             if let Some(example) = result.examples.first_mut() {
@@ -223,20 +263,20 @@ async fn enrich_with_free_translation_if_needed(result: &mut LookupResultDto) {
                     .warnings
                     .retain(|warning| !warning.contains("Gemini API key ausente"));
                 result.warnings.push(
-                    "Gemini nao configurado; usando traducao gratuita sem explicacao por IA."
+                    "Gemini não configurado; usando tradução gratuita sem explicação por IA."
                         .to_string(),
                 );
             } else {
                 result.source = format!("{}+mymemory-translation", result.source);
                 result.warnings.push(format!(
-                    "A traducao original parecia curta demais para a frase inteira e foi substituida. Traducao anterior: {replaced_translation}"
+                    "A tradução original parecia curta demais para a frase inteira e foi substituída. Tradução anterior: {replaced_translation}"
                 ));
             }
         }
         Ok(None) => {}
         Err(error) => result
             .warnings
-            .push(format!("Traducao gratuita indisponivel: {}", error.message)),
+            .push(format!("Tradução gratuita indisponível: {}", error.message)),
     }
 }
 
@@ -258,7 +298,7 @@ async fn enrich_with_reference_image_if_needed(pool: &SqlitePool, result: &mut L
         }
         Ok(None) => {}
         Err(error) => result.warnings.push(format!(
-            "Nao foi possivel carregar imagem de referencia automaticamente: {}",
+            "Não foi possível carregar imagem de referência automaticamente: {}",
             error.message
         )),
     }
@@ -267,15 +307,15 @@ async fn enrich_with_reference_image_if_needed(pool: &SqlitePool, result: &mut L
 async fn fallback_lookup_from_free_translation(query: &str, error: AppError) -> LookupResultDto {
     let translation = match mymemory_provider::translate_en_to_pt_br(query).await {
         Ok(Some(translation)) => translation,
-        Ok(None) => "Traducao indisponivel".to_string(),
+        Ok(None) => "Tradução indisponível".to_string(),
         Err(translation_error) => {
             return local_fallback_lookup(
                 query,
-                "Traducao indisponivel",
+                "Tradução indisponível",
                 vec![
-                    format!("Gemini indisponivel: {}", error.message),
+                    format!("Gemini indisponível: {}", error.message),
                     format!(
-                        "Traducao gratuita indisponivel: {}",
+                        "Tradução gratuita indisponível: {}",
                         translation_error.message
                     ),
                 ],
@@ -286,21 +326,21 @@ async fn fallback_lookup_from_free_translation(query: &str, error: AppError) -> 
     let mut result = local_fallback_lookup(
         query,
         &translation,
-        vec![format!("Gemini indisponivel: {}", error.message)],
+        vec![format!("Gemini indisponível: {}", error.message)],
     );
     result.source = "mymemory-fallback".to_string();
     result.contextual_explanation =
-        "A traducao da frase completa esta disponivel, mas a explicacao contextual da IA nao pode ser gerada."
+        "A tradução da frase completa está disponível, mas a explicação contextual da IA não pode ser gerada."
             .to_string();
     result.contextual_explanation_translation = Some(
-        "A traducao da frase completa esta disponivel, mas a explicacao contextual da IA nao pode ser gerada."
+        "A tradução da frase completa está disponível, mas a explicação contextual da IA não pode ser gerada."
             .to_string(),
     );
     result.meaning =
-        "Use a frase capturada como contexto principal ate o provedor de IA estar disponivel."
+        "Use a frase capturada como contexto principal até o provedor de IA estar disponível."
             .to_string();
     result.meaning_translation = Some(
-        "Use a frase capturada como contexto principal ate o provedor de IA estar disponivel."
+        "Use a frase capturada como contexto principal até o provedor de IA estar disponível."
             .to_string(),
     );
 
@@ -312,23 +352,23 @@ fn local_fallback_lookup(query: &str, translation: &str, warnings: Vec<String>) 
         query: query.to_string(),
         word: infer_main_word(query),
         translation: translation.to_string(),
-        meaning: "Nao foi possivel obter o significado automaticamente.".to_string(),
+        meaning: "Não foi possível obter o significado automaticamente.".to_string(),
         meaning_translation: Some(
-            "Nao foi possivel obter o significado automaticamente.".to_string(),
+            "Não foi possível obter o significado automaticamente.".to_string(),
         ),
         contextual_explanation:
             "O texto capturado foi traduzido, mas o contexto completo depende do provedor de IA."
                 .to_string(),
         contextual_explanation_translation: Some(
-            "Nao foi possivel gerar uma explicacao contextual automaticamente.".to_string(),
+            "Não foi possível gerar uma explicação contextual automaticamente.".to_string(),
         ),
-        pronunciation: None,
-        ipa: None,
         part_of_speech: None,
+        synonyms: Vec::new(),
+        antonyms: Vec::new(),
         reference_image_url: None,
         examples: vec![LookupExampleDto {
             original_text: query.to_string(),
-            translated_text: if translation.eq_ignore_ascii_case("Traducao indisponivel") {
+            translated_text: if translation.eq_ignore_ascii_case("Tradução indisponível") {
                 None
             } else {
                 Some(translation.to_string())
@@ -350,7 +390,7 @@ fn is_cacheable_lookup(result: &LookupResultDto) -> bool {
     !result
         .translation
         .trim()
-        .eq_ignore_ascii_case("Traducao indisponivel")
+        .eq_ignore_ascii_case("Tradução indisponível")
 }
 
 fn normalize_lookup_query(text: &str) -> AppResult<String> {
@@ -415,8 +455,8 @@ fn local_word_translation(term: &str) -> Option<&'static str> {
         "and" => Some("e"),
         "or" => Some("ou"),
         "but" => Some("mas"),
-        "is" => Some("e/esta"),
-        "are" => Some("sao/estao"),
+        "is" => Some("é/está"),
+        "are" => Some("são/estão"),
         "was" => Some("era/estava"),
         "were" => Some("eram/estavam"),
         _ => None,
@@ -490,7 +530,7 @@ mod tests {
 
     #[test]
     fn unavailable_translation_is_not_cacheable() {
-        let result = local_fallback_lookup("context", "Traducao indisponivel", Vec::new());
+        let result = local_fallback_lookup("context", "Tradução indisponível", Vec::new());
 
         assert!(!is_cacheable_lookup(&result));
     }

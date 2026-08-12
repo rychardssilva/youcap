@@ -1,11 +1,14 @@
-import { FormEvent, useEffect, useState } from "react";
+﻿import { FormEvent, useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
+  Check,
+  ChevronDown,
   Clock3,
   ImageIcon,
   Languages,
   Loader2,
   MessageSquareText,
+  NotebookPen,
   Save,
   WholeWord,
 } from "lucide-react";
@@ -13,8 +16,10 @@ import {
 import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorState } from "@/components/shared/error-state";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { userMessage } from "@/lib/user-message";
 import {
+  ensureLexicalRelations,
   getReferenceImages,
   getRelatedWords,
   getWordDetails,
@@ -25,9 +30,19 @@ import {
 import { useNavigationStore } from "@/stores/navigation-store";
 import { useToastStore } from "@/stores/toast-store";
 
+const statusOptions = [
+  { value: "new", label: "Nova" },
+  { value: "learning", label: "Estudando" },
+  { value: "difficult", label: "Difícil" },
+  { value: "known", label: "Conhecida" },
+  { value: "mastered", label: "Dominada" },
+  { value: "archived", label: "Arquivada" },
+];
+
 export function WordPage() {
   const selectedWordId = useNavigationStore((state) => state.selectedWordId);
   const setCurrentView = useNavigationStore((state) => state.setCurrentView);
+  const openNotesForWord = useNavigationStore((state) => state.openNotesForWord);
   const [details, setDetails] = useState<WordDetails | null>(null);
   const [failedWordId, setFailedWordId] = useState<string | null>(null);
   const [termInput, setTermInput] = useState("");
@@ -37,7 +52,11 @@ export function WordPage() {
   const [referenceImages, setReferenceImages] = useState<string[]>([]);
   const [isRefreshingImages, setIsRefreshingImages] = useState(false);
   const [relatedWords, setRelatedWords] = useState<RelatedWord[]>([]);
+  const [isLoadingLexicalRelations, setIsLoadingLexicalRelations] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
+  const statusMenuRef = useRef<HTMLDivElement | null>(null);
+  const lexicalRelationsRequestedRef = useRef<Set<string>>(new Set());
   const addToast = useToastStore((state) => state.addToast);
 
   useEffect(() => {
@@ -62,6 +81,51 @@ export function WordPage() {
         setPartOfSpeechInput(
           nextDetails.word.part_of_speech ?? inferPartOfSpeech(nextDetails.word.term) ?? "",
         );
+
+        const hasSynonyms = nextDetails.lexical_relations.some(
+          (relation) => relation.relation_type === "synonym",
+        );
+        const hasAntonyms = nextDetails.lexical_relations.some(
+          (relation) => relation.relation_type === "antonym",
+        );
+
+        if (
+          (!hasSynonyms || !hasAntonyms) &&
+          !isPhrase(nextDetails.word.term) &&
+          !lexicalRelationsRequestedRef.current.has(nextDetails.word.id)
+        ) {
+          lexicalRelationsRequestedRef.current.add(nextDetails.word.id);
+          setIsLoadingLexicalRelations(true);
+
+          void ensureLexicalRelations(nextDetails.word.id)
+            .then((updatedDetails) => {
+              if (isCurrent && updatedDetails.word.id === nextDetails.word.id) {
+                setDetails(updatedDetails);
+                setTranslationInput(updatedDetails.translations[0]?.translation ?? "");
+                setStatusInput(updatedDetails.word.status);
+                setPartOfSpeechInput(
+                  updatedDetails.word.part_of_speech ??
+                    inferPartOfSpeech(updatedDetails.word.term) ??
+                    "",
+                );
+              }
+            })
+            .catch(() => {
+              if (isCurrent) {
+                addToast({
+                  variant: "info",
+                  title: "Relações não geradas",
+                  description:
+                    "Não foi possível buscar sinônimos e antônimos automaticamente agora.",
+                });
+              }
+            })
+            .finally(() => {
+              if (isCurrent) {
+                setIsLoadingLexicalRelations(false);
+              }
+            });
+        }
 
         void getRelatedWords({
           word_id: nextDetails.word.id,
@@ -100,7 +164,33 @@ export function WordPage() {
     return () => {
       isCurrent = false;
     };
-  }, [selectedWordId]);
+  }, [addToast, selectedWordId]);
+
+  useEffect(() => {
+    if (!isStatusOpen) {
+      return;
+    }
+
+    function closeOnOutsideClick(event: MouseEvent) {
+      if (!statusMenuRef.current?.contains(event.target as Node)) {
+        setIsStatusOpen(false);
+      }
+    }
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsStatusOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isStatusOpen]);
 
   function refreshReferenceImages() {
     if (!details || isRefreshingImages) {
@@ -116,7 +206,7 @@ export function WordPage() {
         addToast({
           variant: "error",
           title: "Erro ao atualizar imagens",
-          description: "Nao foi possivel trocar as imagens de referencia agora.",
+          description: "Não foi possível trocar as imagens de referência agora.",
         });
       })
       .finally(() => setIsRefreshingImages(false));
@@ -127,7 +217,7 @@ export function WordPage() {
       <EmptyState
         icon={WholeWord}
         title="Nenhuma palavra selecionada"
-        description="Abra os detalhes pelo popup ou pela biblioteca para ver significado, contextos e historico."
+        description="Abra os detalhes pelo popup ou pela biblioteca para ver significado, contextos e histórico."
         actionLabel="Ir para biblioteca"
         onAction={() => setCurrentView("vocabulary")}
       />
@@ -135,7 +225,7 @@ export function WordPage() {
   }
 
   if (failedWordId === selectedWordId) {
-    return <ErrorState message="Nao foi possivel carregar os detalhes dessa palavra." />;
+    return <ErrorState message="Não foi possível carregar os detalhes dessa palavra." />;
   }
 
   if (!details || details.word.id !== selectedWordId) {
@@ -149,11 +239,11 @@ export function WordPage() {
     );
   }
 
-  const latestTranslation = details.translations[0]?.translation ?? "Traducao nao registrada";
-  const latestContext = details.contexts[0]?.original_text ?? "Contexto nao registrado";
+  const latestTranslation = details.translations[0]?.translation ?? "Tradução não registrada";
+  const latestContext = details.contexts[0]?.original_text ?? "Contexto não registrado";
   const translationVariations = buildTranslationVariations(details);
-  const synonyms = lexicalRelationsWithFallback(details, "synonym");
-  const antonyms = lexicalRelationsWithFallback(details, "antonym");
+  const synonyms = lexicalRelationsForType(details, "synonym");
+  const antonyms = lexicalRelationsForType(details, "antonym");
   const examplesAndContexts = buildExamplesAndContexts(details);
   const grammarClass = partOfSpeechLabel(
     details.word.part_of_speech?.trim() || inferPartOfSpeech(details.word.term),
@@ -184,7 +274,7 @@ export function WordPage() {
       addToast({
         variant: "success",
         title: "Palavra atualizada",
-        description: "As informacoes foram salvas na biblioteca.",
+        description: "As informações foram salvas na biblioteca.",
       });
     } catch (err) {
       addToast({
@@ -198,21 +288,27 @@ export function WordPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div>
-        <Button variant="ghost" onClick={() => setCurrentView("vocabulary")}>
-          <ArrowLeft className="size-4" aria-hidden="true" />
-          Biblioteca
-        </Button>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Button variant="ghost" onClick={() => setCurrentView("vocabulary")}>
+            <ArrowLeft className="size-4" aria-hidden="true" />
+            Biblioteca
+          </Button>
+          <Button variant="outline" onClick={() => openNotesForWord(details.word.id)}>
+            <NotebookPen className="size-4" aria-hidden="true" />
+            Abrir caderno
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <section className="space-y-5">
-          <div className="rounded-md border bg-card p-5 text-card-foreground">
+        <section className="space-y-4">
+          <div className="surface p-5">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <p className="text-sm text-muted-foreground">Palavra selecionada</p>
-                <h2 className="mt-1 break-words text-2xl font-semibold">{details.word.term}</h2>
+                <h2 className="mt-1 break-words text-3xl font-semibold">{details.word.term}</h2>
                 <p className="mt-2 text-sm font-medium">{latestTranslation}</p>
                 <p className="mt-2 text-sm text-muted-foreground">{latestContext}</p>
               </div>
@@ -220,11 +316,11 @@ export function WordPage() {
           </div>
 
           {referenceImages.length > 0 ? (
-            <section className="rounded-md border bg-card p-5 text-card-foreground">
+            <section className="surface p-5">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <ImageIcon className="size-5 text-primary" aria-hidden="true" />
-                  <h3 className="font-semibold">Imagens de referencia</h3>
+                  <h3 className="font-medium">Imagens de referência</h3>
                 </div>
                 {isRefreshingImages ? (
                   <Loader2
@@ -238,7 +334,7 @@ export function WordPage() {
                   <button
                     key={imageUrl}
                     type="button"
-                    className="overflow-hidden rounded-md border bg-muted text-left transition hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-wait disabled:opacity-70"
+                    className="interactive-surface overflow-hidden rounded-md border bg-muted text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-wait disabled:opacity-70"
                     onClick={refreshReferenceImages}
                     disabled={isRefreshingImages}
                     title="Trocar imagens"
@@ -246,7 +342,7 @@ export function WordPage() {
                     <img
                       className="aspect-[4/3] w-full object-cover"
                       src={imageUrl}
-                      alt={`Imagem de referencia para ${details.word.term}`}
+                      alt={`Imagem de referência para ${details.word.term}`}
                       loading="lazy"
                       onError={(event) => {
                         event.currentTarget.closest("button")?.remove();
@@ -258,33 +354,33 @@ export function WordPage() {
             </section>
           ) : null}
 
-          <section className="rounded-md border bg-card p-5 text-card-foreground">
+          <section className="surface p-5">
             <div className="flex items-center gap-2">
               <Languages className="size-5 text-primary" aria-hidden="true" />
-              <h3 className="font-semibold">Traducoes e palavras relacionadas</h3>
+              <h3 className="font-medium">Traduções e palavras relacionadas</h3>
             </div>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               {translationVariations.length > 0 ? (
                 <div>
-                  <p className="text-sm font-medium">Variacoes de traducao</p>
+                  <p className="text-sm font-medium">Variações de tradução</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {translationVariations.map((translation) => (
-                      <span key={translation} className="rounded-md border px-3 py-2 text-sm">
+                      <span key={translation} className="rounded-md bg-muted px-3 py-2 text-sm">
                         {translation}
                       </span>
                     ))}
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">Nenhuma traducao registrada.</p>
+                <p className="text-sm text-muted-foreground">Nenhuma tradução registrada.</p>
               )}
 
               {relatedWords.length > 0 ? (
                 <div>
-                  <p className="text-sm font-medium">Palavras ligadas em ingles</p>
+                  <p className="text-sm font-medium">Palavras ligadas em inglês</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {relatedWords.map((item) => (
-                      <span key={item.term} className="rounded-md border px-3 py-2 text-sm">
+                      <span key={item.term} className="rounded-md bg-muted px-3 py-2 text-sm">
                         <span className="block font-medium">{item.term}</span>
                         {item.translation ? (
                           <span className="block text-xs text-muted-foreground">
@@ -299,33 +395,38 @@ export function WordPage() {
             </div>
           </section>
 
-          <section className="rounded-md border bg-card p-5 text-card-foreground">
+          <section className="surface p-5">
             <div className="flex items-center gap-2">
               <Languages className="size-5 text-primary" aria-hidden="true" />
-              <h3 className="font-semibold">Sinonimos e antonimos</h3>
+              <h3 className="font-medium">Sinônimos e Antônimos</h3>
             </div>
+            {isLoadingLexicalRelations ? (
+              <p className="mt-2 text-sm text-muted-foreground">
+                Buscando sinônimos e antônimos para salvar no banco...
+              </p>
+            ) : null}
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <LexicalRelationList
-                title="Sinonimos"
+                title="Sinônimos"
                 items={synonyms}
-                empty="Nenhum sinonimo salvo."
+                empty="Nenhum sinônimo salvo."
               />
               <LexicalRelationList
-                title="Antonimos"
+                title="Antônimos"
                 items={antonyms}
-                empty="Nenhum antonimo salvo."
+                empty="Nenhum antônimo salvo."
               />
             </div>
           </section>
 
-          <section className="rounded-md border bg-card p-5 text-card-foreground">
+          <section className="surface p-5">
             <div className="flex items-center gap-2">
               <MessageSquareText className="size-5 text-primary" aria-hidden="true" />
-              <h3 className="font-semibold">Contextos e exemplos</h3>
+              <h3 className="font-medium">Contextos e exemplos</h3>
             </div>
             <div className="mt-4 space-y-3">
               {examplesAndContexts.map((item) => (
-                <div key={item.id} className="rounded-md border p-3 text-sm">
+                <div key={item.id} className="surface-soft p-3 text-sm">
                   <p>{item.originalText}</p>
                   {item.translatedText ? (
                     <p className="mt-1 text-muted-foreground">{item.translatedText}</p>
@@ -343,19 +444,19 @@ export function WordPage() {
             </div>
           </section>
 
-          <section className="rounded-md border bg-card p-5 text-card-foreground">
+          <section className="surface p-5">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <MessageSquareText className="size-5 text-primary" aria-hidden="true" />
-                <h3 className="font-semibold">Frases proprias</h3>
+                <h3 className="font-medium">Frases próprias</h3>
               </div>
-              <Button variant="outline" onClick={() => setCurrentView("notes")}>
+              <Button variant="outline" onClick={() => openNotesForWord(details.word.id)}>
                 Abrir caderno
               </Button>
             </div>
             <div className="mt-4 space-y-3">
               {details.personal_sentences.map((sentence) => (
-                <div key={sentence.id} className="rounded-md border p-3 text-sm">
+                <div key={sentence.id} className="surface-soft p-3 text-sm">
                   <p>{sentence.original_text}</p>
                   {sentence.translated_text ? (
                     <p className="mt-1 text-muted-foreground">{sentence.translated_text}</p>
@@ -367,7 +468,7 @@ export function WordPage() {
               ))}
               {details.personal_sentences.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  Nenhuma frase propria salva para esta palavra.
+                  Nenhuma frase própria salva para esta palavra.
                 </p>
               ) : null}
             </div>
@@ -375,10 +476,10 @@ export function WordPage() {
         </section>
 
         <aside className="space-y-5">
-          <section className="rounded-md border bg-card p-5 text-card-foreground">
+          <section className="surface p-5">
             <div className="flex items-center gap-2">
               <WholeWord className="size-5 text-primary" aria-hidden="true" />
-              <h3 className="font-semibold">Resumo</h3>
+              <h3 className="font-medium">Resumo</h3>
             </div>
             <dl className="mt-4 space-y-3 text-sm">
               <div>
@@ -398,7 +499,7 @@ export function WordPage() {
                 <dd className="mt-1 flex flex-wrap gap-1.5">
                   {tags.length > 0 ? (
                     tags.map((tag) => (
-                      <span key={tag} className="rounded border px-2 py-1 text-xs font-medium">
+                      <span key={tag} className="rounded bg-muted px-2 py-1 text-xs font-medium">
                         {tag}
                       </span>
                     ))
@@ -410,10 +511,10 @@ export function WordPage() {
             </dl>
           </section>
 
-          <section className="rounded-md border bg-card p-5 text-card-foreground">
+          <section className="surface p-5">
             <div className="flex items-center gap-2">
               <Clock3 className="size-5 text-primary" aria-hidden="true" />
-              <h3 className="font-semibold">Historico</h3>
+              <h3 className="font-medium">Histórico</h3>
             </div>
             <dl className="mt-4 grid gap-3 text-sm">
               <SummaryRow
@@ -421,7 +522,7 @@ export function WordPage() {
                 value={formatDate(details.history_summary.first_lookup_at)}
               />
               <SummaryRow
-                label="Ultima consulta"
+                label="Última consulta"
                 value={formatDate(details.history_summary.last_lookup_at)}
               />
               <SummaryRow
@@ -433,13 +534,13 @@ export function WordPage() {
             </dl>
           </section>
 
-          <section className="rounded-md border bg-card p-5 text-card-foreground">
-            <h3 className="font-semibold">Editar informacoes</h3>
+          <section className="surface p-5">
+            <h3 className="font-medium">Editar informações</h3>
             <form className="mt-4 space-y-3" onSubmit={handleSubmit}>
               <label className="block text-sm">
                 <span className="text-muted-foreground">Palavra original</span>
                 <input
-                  className="mt-1 h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="field mt-1 w-full"
                   value={termInput}
                   maxLength={160}
                   onChange={(event) => setTermInput(event.currentTarget.value)}
@@ -447,35 +548,80 @@ export function WordPage() {
               </label>
 
               <label className="block text-sm">
-                <span className="text-muted-foreground">Traducao principal</span>
+                <span className="text-muted-foreground">Tradução principal</span>
                 <input
-                  className="mt-1 h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="field mt-1 w-full"
                   value={translationInput}
                   maxLength={240}
                   onChange={(event) => setTranslationInput(event.currentTarget.value)}
                 />
               </label>
 
-              <label className="block text-sm">
+              <div ref={statusMenuRef} className="relative text-sm">
                 <span className="text-muted-foreground">Status</span>
-                <select
-                  className="mt-1 h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  value={statusInput}
-                  onChange={(event) => setStatusInput(event.currentTarget.value)}
+                <button
+                  className={cn(
+                    "field mt-1 flex w-full items-center gap-2 text-left transition-colors",
+                    "hover:border-primary/35 hover:bg-accent hover:text-accent-foreground",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    isStatusOpen && "border-primary/40 bg-accent text-accent-foreground",
+                  )}
+                  type="button"
+                  aria-haspopup="listbox"
+                  aria-expanded={isStatusOpen}
+                  aria-label="Status"
+                  onClick={() => setIsStatusOpen((current) => !current)}
                 >
-                  <option value="new">Nova</option>
-                  <option value="learning">Estudando</option>
-                  <option value="difficult">Dificil</option>
-                  <option value="known">Conhecida</option>
-                  <option value="mastered">Dominada</option>
-                  <option value="archived">Arquivada</option>
-                </select>
-              </label>
+                  <span className="flex-1">
+                    {statusOptions.find((option) => option.value === statusInput)?.label ??
+                      statusLabel(statusInput)}
+                  </span>
+                  <ChevronDown
+                    className={cn("size-4 shrink-0 opacity-70 transition-transform", {
+                      "rotate-180": isStatusOpen,
+                    })}
+                    aria-hidden="true"
+                  />
+                </button>
+
+                {isStatusOpen ? (
+                  <div
+                    className="absolute left-0 right-0 z-30 mt-2 overflow-hidden rounded-md border border-border bg-popover p-1 text-sm text-popover-foreground shadow-lg"
+                    role="listbox"
+                    aria-label="Status"
+                  >
+                    {statusOptions.map((option) => {
+                      const isSelected = option.value === statusInput;
+
+                      return (
+                        <button
+                          key={option.value}
+                          className={cn(
+                            "flex w-full items-center gap-2 rounded px-2.5 py-2 text-left transition-colors",
+                            "hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground focus-visible:outline-none",
+                            isSelected && "bg-accent text-accent-foreground",
+                          )}
+                          type="button"
+                          role="option"
+                          aria-selected={isSelected}
+                          onClick={() => {
+                            setStatusInput(option.value);
+                            setIsStatusOpen(false);
+                          }}
+                        >
+                          <span className="flex-1">{option.label}</span>
+                          {isSelected ? <Check className="size-4" aria-hidden="true" /> : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
 
               <label className="block text-sm">
                 <span className="text-muted-foreground">Classe gramatical</span>
                 <input
-                  className="mt-1 h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="field mt-1 w-full"
                   value={partOfSpeechInput || inferPartOfSpeech(termInput) || ""}
                   maxLength={80}
                   onChange={(event) => setPartOfSpeechInput(event.currentTarget.value)}
@@ -484,7 +630,7 @@ export function WordPage() {
 
               <Button className="w-full" isLoading={isSaving} type="submit">
                 <Save className="size-4" aria-hidden="true" />
-                Salvar alteracoes
+                Salvar alterações
               </Button>
             </form>
           </section>
@@ -518,7 +664,7 @@ function LexicalRelationList({
       {items.length > 0 ? (
         <div className="mt-2 flex flex-wrap gap-2">
           {items.map((item) => (
-            <span key={item.id} className="rounded-md border px-3 py-2 text-sm">
+            <span key={item.id} className="rounded-md bg-muted px-3 py-2 text-sm">
               <span className="block font-medium">{item.term}</span>
               {item.translation ? (
                 <span className="block text-xs text-muted-foreground">{item.translation}</span>
@@ -546,77 +692,18 @@ type DisplayExample = {
   highlightedText: string | null;
 };
 
-function lexicalRelationsWithFallback(
+function lexicalRelationsForType(
   details: WordDetails,
   relationType: "synonym" | "antonym",
 ): LexicalRelationView[] {
-  const savedRelations = details.lexical_relations
+  return details.lexical_relations
     .filter((item) => item.relation_type === relationType)
     .map((item) => ({
       id: item.id,
       term: item.term,
       translation: item.translation,
     }));
-
-  if (savedRelations.length > 0) {
-    return savedRelations;
-  }
-
-  const fallback = lexicalRelationFallbacks[details.word.normalized_term]?.[relationType] ?? [];
-
-  return fallback.map((item, index) => ({
-    id: `fallback-${relationType}-${details.word.normalized_term}-${index}`,
-    ...item,
-  }));
 }
-
-const lexicalRelationFallbacks: Record<
-  string,
-  {
-    synonym: Array<{ term: string; translation: string | null }>;
-    antonym: Array<{ term: string; translation: string | null }>;
-  }
-> = {
-  car: {
-    synonym: [
-      { term: "automobile", translation: "automovel" },
-      { term: "vehicle", translation: "veiculo" },
-    ],
-    antonym: [{ term: "pedestrian", translation: "pedestre" }],
-  },
-  hidden: {
-    synonym: [
-      { term: "concealed", translation: "escondido" },
-      { term: "secret", translation: "secreto" },
-    ],
-    antonym: [{ term: "visible", translation: "visivel" }],
-  },
-  village: {
-    synonym: [
-      { term: "hamlet", translation: "aldeia pequena" },
-      { term: "settlement", translation: "assentamento" },
-    ],
-    antonym: [{ term: "city", translation: "cidade" }],
-  },
-  run: {
-    synonym: [
-      { term: "sprint", translation: "correr rapidamente" },
-      { term: "operate", translation: "funcionar" },
-    ],
-    antonym: [{ term: "walk", translation: "caminhar" }],
-  },
-  time: {
-    synonym: [
-      { term: "period", translation: "periodo" },
-      { term: "moment", translation: "momento" },
-    ],
-    antonym: [{ term: "timelessness", translation: "atemporalidade" }],
-  },
-  twelve: {
-    synonym: [{ term: "dozen", translation: "duzia" }],
-    antonym: [{ term: "zero", translation: "zero" }],
-  },
-};
 
 function buildTranslationVariations(details: WordDetails) {
   const values = details.translations.map((translation) => translation.translation);
@@ -627,7 +714,7 @@ function buildTranslationVariations(details: WordDetails) {
     time: ["Tempo", "Hora", "Momento"],
     run: ["Correr", "Funcionar", "Esgotar"],
     twelve: ["Doze"],
-    ago: ["Atras", "Faz", "Antes"],
+    ago: ["atrás", "Faz", "Antes"],
   };
 
   return uniqueTextValues([...values, ...(localVariations[termKey] ?? [])]).slice(0, 8);
@@ -718,7 +805,7 @@ function examplesForTerm(term: string): DisplayExample[] {
     hidden: [
       {
         originalText: "The hidden door was behind the bookshelf.",
-        translatedText: "A porta escondida ficava atras da estante.",
+        translatedText: "A porta escondida ficava atrás da estante.",
       },
       {
         originalText: "She found a hidden message in the letter.",
@@ -746,7 +833,7 @@ function examplesForTerm(term: string): DisplayExample[] {
     time: [
       {
         originalText: "We do not have enough time.",
-        translatedText: "Nos nao temos tempo suficiente.",
+        translatedText: "Nós não temos tempo suficiente.",
       },
       {
         originalText: "Time passed quickly.",
@@ -821,7 +908,7 @@ function statusLabel(status: string) {
   const labels: Record<string, string> = {
     new: "Nova",
     learning: "Estudando",
-    difficult: "Dificil",
+    difficult: "Difícil",
     known: "Conhecida",
     mastered: "Dominada",
     archived: "Arquivada",
@@ -832,18 +919,18 @@ function statusLabel(status: string) {
 
 function partOfSpeechLabel(value: string | null) {
   if (!value?.trim()) {
-    return "Nao informada";
+    return "Não informada";
   }
 
   const labels: Record<string, string> = {
     noun: "Substantivo",
     verb: "Verbo",
     adjective: "Adjetivo",
-    adverb: "Adverbio",
+    adverb: "Advérbio",
     pronoun: "Pronome",
-    preposition: "Preposicao",
-    conjunction: "Conjuncao",
-    interjection: "Interjeicao",
+    preposition: "Preposição",
+    conjunction: "Conjunção",
+    interjection: "Interjeição",
     determiner: "Determinante",
     number: "Numero",
   };
@@ -867,13 +954,13 @@ function inferPartOfSpeech(term: string) {
 
 function formatDate(value: string | null) {
   if (!value) {
-    return "Nao registrado";
+    return "Não registrado";
   }
 
   const date = parseDatabaseDate(value);
 
   if (Number.isNaN(date.getTime())) {
-    return "Data indisponivel";
+    return "Data indisponível";
   }
 
   return new Intl.DateTimeFormat("pt-BR", {

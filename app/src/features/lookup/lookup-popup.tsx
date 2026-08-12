@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow, LogicalPosition, LogicalSize } from "@tauri-apps/api/window";
 import { BookOpen, ExternalLink, ImageIcon, Loader2, Save, SearchX, X } from "lucide-react";
@@ -143,7 +143,7 @@ export function LookupPopup() {
   if (status === "error") {
     return (
       <main className="min-h-screen bg-background p-4 text-foreground">
-        <ErrorState message={userMessage(error ?? "Nao foi possivel concluir a consulta.")} />
+        <ErrorState message={userMessage(error ?? "Não foi possível concluir a consulta.")} />
       </main>
     );
   }
@@ -151,7 +151,7 @@ export function LookupPopup() {
   if (status === "loading" || !result) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
-        <div className="w-full max-w-sm rounded-md border bg-card p-5 text-card-foreground">
+        <div className="surface w-full max-w-sm p-5">
           <div className="flex items-center gap-3">
             <Loader2 className="size-5 animate-spin text-primary" aria-hidden="true" />
             <div>
@@ -172,9 +172,9 @@ export function LookupPopup() {
         <EmptyState
           icon={SearchX}
           title="Nenhum resultado util encontrado"
-          description="A consulta foi concluida, mas nao trouxe traducao ou contexto suficiente. Confira o texto capturado e tente novamente."
+          description="A consulta foi concluída, mas não trouxe tradução ou contexto suficiente. Confira o texto capturado e tente novamente."
         />
-        <section className="mt-4 rounded-md border bg-card p-4">
+        <section className="surface mt-4 p-4">
           <p className="text-xs text-muted-foreground">Texto capturado</p>
           <p className="mt-1 text-sm leading-6">{result.query}</p>
         </section>
@@ -195,11 +195,11 @@ export function LookupPopup() {
 
   return (
     <main className="min-h-screen overflow-auto bg-background text-foreground">
-      <div className="border-b bg-card px-4 py-3 text-card-foreground">
+      <div className="border-b bg-background px-4 py-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs uppercase text-muted-foreground">Consulta contextual</p>
-            <h1 className="mt-1 truncate text-xl font-semibold">{result.word}</h1>
+            <p className="text-xs text-muted-foreground">Consulta contextual</p>
+            <h1 className="mt-1 truncate text-xl font-medium">{result.word}</h1>
           </div>
           <Button
             variant="ghost"
@@ -212,19 +212,19 @@ export function LookupPopup() {
         </div>
       </div>
 
-      <div className="space-y-4 p-4">
-        <section className="rounded-md border bg-card p-4">
+      <div className="space-y-3 p-4">
+        <section className="surface p-4">
           <p className="text-xs text-muted-foreground">
             {isPhrase ? "Frase original" : "Texto capturado"}
           </p>
           <p className="mt-1 text-sm leading-6">{result.query}</p>
         </section>
 
-        <section className="rounded-md border bg-card p-4">
+        <section className="surface p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs text-muted-foreground">Traducao</p>
-              <p className="mt-1 text-lg font-semibold">{result.translation}</p>
+              <p className="text-xs text-muted-foreground">Tradução</p>
+              <p className="mt-1 text-lg font-medium">{result.translation}</p>
               {result.part_of_speech ? (
                 <p className="mt-1 text-sm text-muted-foreground">
                   Classe gramatical: {translatePartOfSpeech(result.part_of_speech)}
@@ -238,13 +238,13 @@ export function LookupPopup() {
           <section className="space-y-2">
             <div className="flex items-center gap-2">
               <ImageIcon className="size-4 text-primary" aria-hidden="true" />
-              <h2 className="text-sm font-semibold">Imagem de referencia</h2>
+              <h2 className="text-sm font-semibold">Imagem de Referência</h2>
             </div>
-            <div className="max-w-xs overflow-hidden rounded-md border bg-card">
+            <div className="surface max-w-xs overflow-hidden">
               <img
                 className="aspect-[4/3] max-h-40 w-full object-cover"
                 src={result.reference_image_url ?? undefined}
-                alt={`Imagem de referencia para ${result.word}`}
+                alt={`Imagem de Referência para ${result.word}`}
                 loading="lazy"
                 onError={(event) => {
                   event.currentTarget.closest("section")?.remove();
@@ -259,11 +259,11 @@ export function LookupPopup() {
             <BookOpen className="size-4 text-primary" aria-hidden="true" />
             <h2 className="text-sm font-semibold">Sentido no contexto</h2>
           </div>
-          <div className="rounded-md border bg-card p-3 text-sm leading-6">
+          <div className="surface p-3 text-sm leading-6">
             <p className="font-medium text-foreground">{result.contextual_explanation}</p>
             <p className="mt-2 text-muted-foreground">{contextTranslation}</p>
           </div>
-          <div className="rounded-md border bg-card p-3 text-sm leading-6">
+          <div className="surface p-3 text-sm leading-6">
             <p className="font-medium text-foreground">{result.meaning}</p>
             {meaningTranslation ? (
               <p className="mt-2 text-muted-foreground">{meaningTranslation}</p>
@@ -275,7 +275,7 @@ export function LookupPopup() {
           <section className="space-y-2">
             <h2 className="text-sm font-semibold">Exemplos</h2>
             {result.examples.map((example) => (
-              <div key={example.original_text} className="rounded-md border bg-card p-3 text-sm">
+              <div key={example.original_text} className="surface p-3 text-sm">
                 <p>{example.original_text}</p>
                 {example.translated_text ? (
                   <p className="mt-1 text-muted-foreground">{example.translated_text}</p>
@@ -316,7 +316,12 @@ function visibleWarning(warnings: string[]) {
 }
 
 function isEmptyLookupResult(result: LookupResult) {
-  return normalizeText(result.translation) === "traducao indisponivel";
+  const normalizedTranslation = normalizeText(result.translation);
+
+  return (
+    normalizedTranslation === "tradução indisponível" ||
+    normalizedTranslation === "tradução indisponível"
+  );
 }
 
 function normalizeText(text: string) {

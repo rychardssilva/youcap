@@ -20,13 +20,21 @@ pub struct LookupResultDto {
     pub meaning_translation: Option<String>,
     pub contextual_explanation: String,
     pub contextual_explanation_translation: Option<String>,
-    pub pronunciation: Option<String>,
-    pub ipa: Option<String>,
     pub part_of_speech: Option<String>,
+    #[serde(default)]
+    pub synonyms: Vec<LookupLexicalRelationDto>,
+    #[serde(default)]
+    pub antonyms: Vec<LookupLexicalRelationDto>,
     pub reference_image_url: Option<String>,
     pub examples: Vec<LookupExampleDto>,
     pub source: String,
     pub warnings: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LookupLexicalRelationDto {
+    pub term: String,
+    pub translation: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

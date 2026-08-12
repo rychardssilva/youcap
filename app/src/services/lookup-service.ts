@@ -15,9 +15,9 @@ export type LookupResult = {
   meaning_translation?: string | null;
   contextual_explanation: string;
   contextual_explanation_translation?: string | null;
-  pronunciation: string | null;
-  ipa: string | null;
   part_of_speech: string | null;
+  synonyms: Array<{ term: string; translation: string | null }>;
+  antonyms: Array<{ term: string; translation: string | null }>;
   reference_image_url?: string | null;
   examples: LookupExample[];
   source: string;
@@ -42,9 +42,9 @@ export async function lookupText(text: string): Promise<LookupResult | void> {
       contextual_explanation: "Execute pelo aplicativo desktop para consultar o provider real.",
       contextual_explanation_translation:
         "Execute pelo aplicativo desktop para consultar o provider real.",
-      pronunciation: null,
-      ipa: null,
       part_of_speech: null,
+      synonyms: [],
+      antonyms: [],
       reference_image_url: null,
       examples: [{ original_text: text, translated_text: null }],
       source: "browser-preview",

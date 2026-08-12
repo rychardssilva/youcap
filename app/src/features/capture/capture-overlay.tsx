@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 
 import {
@@ -128,11 +128,11 @@ export function CaptureOverlay() {
 
       <div className="pointer-events-none absolute left-4 top-4 rounded-md bg-black/70 px-3 py-2 text-sm">
         {previewFailed
-          ? "Nao foi possivel carregar a previa da tela. Esc cancela."
+          ? "Não foi possível carregar a prévia da tela. Esc cancela."
           : sessionFailed
-            ? "Nao foi possivel iniciar a sessao. Esc cancela."
+            ? "Não foi possível iniciar a sessão. Esc cancela."
             : session
-            ? "Arraste para selecionar uma area. Esc cancela."
+            ? "Arraste para selecionar uma área. Esc cancela."
             : "Preparando captura..."}
       </div>
 

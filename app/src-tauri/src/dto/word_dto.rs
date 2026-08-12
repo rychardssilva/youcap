@@ -17,6 +17,11 @@ pub struct WordDetailsRequest {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct EnsureLexicalRelationsRequest {
+    pub id: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct ReferenceImagesRequest {
     pub term: String,
     pub limit: Option<usize>,
@@ -66,8 +71,6 @@ pub struct WordListItemDto {
     pub term: String,
     pub normalized_term: String,
     pub language: String,
-    pub pronunciation: Option<String>,
-    pub ipa: Option<String>,
     pub part_of_speech: Option<String>,
     pub difficulty: i64,
     pub status: String,
@@ -89,8 +92,6 @@ pub struct UpdateWordDetailsRequest {
     pub translation: Option<String>,
     pub meaning: Option<String>,
     pub status: Option<String>,
-    pub pronunciation: Option<String>,
-    pub ipa: Option<String>,
     pub part_of_speech: Option<String>,
     pub difficulty: Option<i64>,
     pub frequency_rank: Option<i64>,

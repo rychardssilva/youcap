@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Immersion Vocabulary",
+  "productName": "Yocab",
   "version": "0.1.0",
   "identifier": "com.immersion.vocabulary",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Immersion Vocabulary",
+        "title": "Yocab",
         "width": 800,
         "height": 600
       }

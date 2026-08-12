@@ -1,4 +1,4 @@
-import { AlertTriangle } from "lucide-react";
+﻿import { AlertTriangle } from "lucide-react";
 
 import { StateView } from "@/components/shared/state-view";
 
@@ -11,7 +11,7 @@ export function ErrorState({ message, onRetry }: ErrorStateProps) {
   return (
     <StateView
       icon={AlertTriangle}
-      title="Nao foi possivel carregar"
+      title="Não foi possível carregar"
       description={message}
       actionLabel={onRetry ? "Tentar novamente" : undefined}
       onAction={onRetry}

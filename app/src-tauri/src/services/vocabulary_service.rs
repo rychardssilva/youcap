@@ -19,7 +19,7 @@ pub async fn create_word(pool: &SqlitePool, request: CreateWordRequest) -> AppRe
     if term.is_empty() {
         return Err(AppError::new(
             "validation_error",
-            "A palavra nao pode ficar vazia.",
+            "A palavra não pode ficar vazia.",
         ));
     }
 
@@ -69,7 +69,7 @@ pub async fn search_words(
 pub async fn get_word_details(pool: &SqlitePool, word_id: &str) -> AppResult<WordDetailsDto> {
     word_repository::get_word_details(pool, word_id)
         .await?
-        .ok_or_else(|| AppError::new("word_not_found", "Palavra nao encontrada."))
+        .ok_or_else(|| AppError::new("word_not_found", "Palavra não encontrada."))
 }
 
 pub async fn update_word_details(
@@ -79,7 +79,7 @@ pub async fn update_word_details(
     if request.id.trim().is_empty() {
         return Err(AppError::new(
             "validation_error",
-            "A palavra selecionada e invalida.",
+            "A palavra selecionada é inválida.",
         ));
     }
 
@@ -88,25 +88,17 @@ pub async fn update_word_details(
         if term.trim().is_empty() {
             return Err(AppError::new(
                 "validation_error",
-                "A palavra original nao pode ficar vazia.",
+                "A palavra original não pode ficar vazia.",
             ));
         }
     }
 
     if let Some(translation) = request.translation.as_deref() {
-        validate_optional_field("traducao", translation, 240)?;
+        validate_optional_field("tradução", translation, 240)?;
     }
 
     if let Some(meaning) = request.meaning.as_deref() {
         validate_optional_field("significado", meaning, 800)?;
-    }
-
-    if let Some(pronunciation) = request.pronunciation.as_deref() {
-        validate_optional_field("pronuncia", pronunciation, 500)?;
-    }
-
-    if let Some(ipa) = request.ipa.as_deref() {
-        validate_optional_field("IPA", ipa, 120)?;
     }
 
     if let Some(part_of_speech) = request.part_of_speech.as_deref() {
@@ -140,30 +132,30 @@ pub async fn update_word_details(
     }
 
     if let Some(example_translation) = request.example_translation.as_deref() {
-        validate_optional_field("traducao do exemplo", example_translation, 600)?;
+        validate_optional_field("tradução do exemplo", example_translation, 600)?;
     }
 
     if let Some(synonyms) = request.synonyms.as_deref() {
-        validate_optional_field("sinonimos", synonyms, 800)?;
+        validate_optional_field("sinônimos", synonyms, 800)?;
     }
 
     if let Some(antonyms) = request.antonyms.as_deref() {
-        validate_optional_field("antonimos", antonyms, 800)?;
+        validate_optional_field("antônimos", antonyms, 800)?;
     }
 
     if let Some(personal_note) = request.personal_note.as_deref() {
-        validate_optional_field("anotacao pessoal", personal_note, 1200)?;
+        validate_optional_field("anotacao pessoal", personal_note, 20_000)?;
     }
 
     if let Some(personal_sentence) = request.personal_sentence.as_deref() {
-        validate_optional_field("frase propria", personal_sentence, 600)?;
+        validate_optional_field("frase propria", personal_sentence, 3_000)?;
     }
 
     if let Some(personal_sentence_translation) = request.personal_sentence_translation.as_deref() {
         validate_optional_field(
-            "traducao da frase propria",
+            "tradução da frase própria",
             personal_sentence_translation,
-            600,
+            3_000,
         )?;
     }
 
@@ -176,7 +168,7 @@ pub async fn update_word_details(
     }
 
     if let Some(review_scheduled_for) = request.review_scheduled_for.as_deref() {
-        validate_optional_field("data de revisao", review_scheduled_for, 40)?;
+        validate_optional_field("data de revisão", review_scheduled_for, 40)?;
     }
 
     if let Some(status) = request.status.as_deref() {
@@ -190,8 +182,6 @@ pub async fn update_word_details(
         request.translation.as_deref(),
         request.meaning.as_deref(),
         request.status.as_deref(),
-        request.pronunciation.as_deref(),
-        request.ipa.as_deref(),
         request.part_of_speech.as_deref(),
         request.difficulty,
         request.frequency_rank,
@@ -210,6 +200,64 @@ pub async fn update_word_details(
     .await?;
 
     get_word_details(pool, request.id.trim()).await
+}
+
+pub async fn ensure_lexical_relations(
+    pool: &SqlitePool,
+    word_id: &str,
+) -> AppResult<WordDetailsDto> {
+    let details = get_word_details(pool, word_id).await?;
+    let normalized_term = normalize_related_term(&details.word.normalized_term);
+
+    if normalized_term.is_empty() || is_phrase(&normalized_term) {
+        return Ok(details);
+    }
+
+    let has_synonyms = details
+        .lexical_relations
+        .iter()
+        .any(|relation| relation.relation_type == "synonym");
+    let has_antonyms = details
+        .lexical_relations
+        .iter()
+        .any(|relation| relation.relation_type == "antonym");
+
+    if has_synonyms && has_antonyms {
+        return Ok(details);
+    }
+
+    let Some(api_key) = lookup_api_key(pool).await? else {
+        return Ok(details);
+    };
+
+    let Ok(result) = gemini_provider::contextual_lookup(&details.word.term, Some(api_key)).await
+    else {
+        return Ok(details);
+    };
+
+    if !has_synonyms {
+        word_repository::upsert_lexical_relations(
+            pool,
+            &details.word.id,
+            "synonym",
+            &result.synonyms,
+            &result.source,
+        )
+        .await?;
+    }
+
+    if !has_antonyms {
+        word_repository::upsert_lexical_relations(
+            pool,
+            &details.word.id,
+            "antonym",
+            &result.antonyms,
+            &result.source,
+        )
+        .await?;
+    }
+
+    get_word_details(pool, word_id).await
 }
 
 pub async fn get_related_words(
@@ -396,7 +444,7 @@ fn validate_review_rating(rating: &str) -> AppResult<()> {
         "again" | "hard" | "good" | "easy" => Ok(()),
         _ => Err(AppError::new(
             "validation_error",
-            "A revisao precisa ser marcada como repetir, dificil, boa ou facil.",
+            "A revisão precisa ser marcada como repetir, difícil, boa ou fácil.",
         )),
     }
 }

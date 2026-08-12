@@ -2,9 +2,9 @@ use tauri::State;
 
 use crate::{
     dto::word_dto::{
-        CreateWordRequest, ReferenceImagesRequest, RelatedWordDto, RelatedWordsRequest,
-        SearchWordsRequest, SearchWordsResponse, UpdateWordDetailsRequest, WordDetailsDto,
-        WordDetailsRequest,
+        CreateWordRequest, EnsureLexicalRelationsRequest, ReferenceImagesRequest, RelatedWordDto,
+        RelatedWordsRequest, SearchWordsRequest, SearchWordsResponse, UpdateWordDetailsRequest,
+        WordDetailsDto, WordDetailsRequest,
     },
     errors::AppError,
     models::word::Word,
@@ -47,6 +47,14 @@ pub async fn update_word_details(
     request: UpdateWordDetailsRequest,
 ) -> Result<WordDetailsDto, AppError> {
     vocabulary_service::update_word_details(&state.db, request).await
+}
+
+#[tauri::command]
+pub async fn ensure_lexical_relations(
+    state: State<'_, AppState>,
+    request: EnsureLexicalRelationsRequest,
+) -> Result<WordDetailsDto, AppError> {
+    vocabulary_service::ensure_lexical_relations(&state.db, &request.id).await
 }
 
 #[tauri::command]

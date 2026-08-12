@@ -16,7 +16,7 @@ pub async fn upsert_setting(
     if key.is_empty() {
         return Err(AppError::new(
             "validation_error",
-            "A chave da configuracao nao pode ficar vazia.",
+            "A chave da configuração não pode ficar vazia.",
         ));
     }
 
@@ -25,7 +25,7 @@ pub async fn upsert_setting(
     if value.is_empty() && !allows_empty_value(key) {
         return Err(AppError::new(
             "validation_error",
-            "O valor da configuracao nao pode ficar vazio.",
+            "O valor da configuração não pode ficar vazio.",
         ));
     }
 
@@ -53,15 +53,15 @@ fn validate_setting_value(key: &str, value: &str) -> AppResult<()> {
         )),
         "target_language" if value != "pt-BR" => Err(AppError::new(
             "validation_error",
-            "O MVP aceita apenas portugues do Brasil como idioma de destino.",
+            "A versao atual aceita apenas portugues do Brasil como idioma de destino.",
         )),
         "ocr_provider" if value != "ocr_space" => Err(AppError::new(
             "validation_error",
-            "Provider de OCR invalido para o MVP.",
+            "Provider de OCR invalido para a versao atual.",
         )),
         "ai_provider" if value != "gemini" => Err(AppError::new(
             "validation_error",
-            "Provider de IA invalido para o MVP.",
+            "Provider de IA invalido para a versao atual.",
         )),
         "global_shortcut" if !looks_like_shortcut(value) => Err(AppError::new(
             "validation_error",

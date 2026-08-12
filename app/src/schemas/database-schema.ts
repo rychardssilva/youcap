@@ -12,8 +12,6 @@ export const wordSchema = z.object({
   term: z.string(),
   normalized_term: z.string(),
   language: z.string(),
-  pronunciation: z.string().nullable(),
-  ipa: z.string().nullable(),
   part_of_speech: z.string().nullable(),
   difficulty: z.number(),
   status: z.string(),

@@ -22,8 +22,6 @@ export type Word = {
   term: string;
   normalized_term: string;
   language: string;
-  pronunciation: string | null;
-  ipa: string | null;
   part_of_speech: string | null;
   difficulty: number;
   status: string;
@@ -204,8 +202,6 @@ export async function updateWordDetails(params: {
   translation?: string;
   meaning?: string;
   status?: string;
-  pronunciation?: string;
-  ipa?: string;
   part_of_speech?: string;
   difficulty?: number;
   frequency_rank?: number | null;
@@ -223,6 +219,20 @@ export async function updateWordDetails(params: {
 }): Promise<WordDetails> {
   const response = await invoke("update_word_details", {
     request: params,
+  });
+
+  return wordDetailsSchema.parse(response);
+}
+
+export async function ensureLexicalRelations(wordId: string): Promise<WordDetails> {
+  if (!("__TAURI_INTERNALS__" in window)) {
+    return getWordDetails(wordId);
+  }
+
+  const response = await invoke("ensure_lexical_relations", {
+    request: {
+      id: wordId,
+    },
   });
 
   return wordDetailsSchema.parse(response);

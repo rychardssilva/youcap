@@ -1,7 +1,6 @@
 import {
   BookOpen,
   Crosshair,
-  History,
   Library,
   NotebookPen,
   Settings,
@@ -14,13 +13,13 @@ export const navigationItems: NavigationItem[] = [
   {
     id: "capture",
     label: "Captura",
-    description: "Atalho global e selecao de area",
+    description: "Atalho global e seleção de área",
     icon: Crosshair,
   },
   {
     id: "vocabulary",
     label: "Biblioteca",
-    description: "Organizacao do vocabulario salvo",
+    description: "Organização do vocabulário salvo",
     icon: Library,
   },
   {
@@ -32,25 +31,19 @@ export const navigationItems: NavigationItem[] = [
   {
     id: "notes",
     label: "Caderno",
-    description: "Anotacoes, frases e tags",
+    description: "Anotações, frases e tags",
     icon: NotebookPen,
   },
   {
-    id: "history",
-    label: "Historico",
-    description: "Registro das consultas realizadas",
-    icon: History,
-  },
-  {
     id: "review",
-    label: "Revisao",
-    description: "Reforco do aprendizado",
+    label: "Revisão",
+    description: "Reforço do aprendizado",
     icon: BookOpen,
   },
   {
     id: "settings",
-    label: "Configuracoes",
-    description: "Preferencias do aplicativo",
+    label: "Configurações",
+    description: "Preferências do aplicativo",
     icon: Settings,
   },
 ];

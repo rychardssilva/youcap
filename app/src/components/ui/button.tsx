@@ -6,17 +6,18 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-md border border-transparent px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md border border-transparent px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        outline: "border-border bg-background hover:bg-accent hover:text-accent-foreground",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
+        outline:
+          "border-border bg-background text-foreground hover:bg-accent hover:text-accent-foreground",
+        ghost: "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        icon: "size-10 px-0",
+        default: "h-9 px-3 py-2",
+        icon: "size-9 px-0",
       },
     },
     defaultVariants: {

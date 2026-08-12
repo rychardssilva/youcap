@@ -4,7 +4,7 @@ use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    dto::lookup_dto::{LookupExampleDto, LookupResultDto},
+    dto::lookup_dto::{LookupExampleDto, LookupLexicalRelationDto, LookupResultDto},
     dto::word_dto::RelatedWordDto,
     errors::{AppError, AppResult},
 };
@@ -75,13 +75,19 @@ struct PartialLookupResultDto {
     meaning_translation: Option<String>,
     contextual_explanation: Option<String>,
     contextual_explanation_translation: Option<String>,
-    pronunciation: Option<String>,
-    ipa: Option<String>,
     part_of_speech: Option<String>,
+    synonyms: Option<Vec<PartialLexicalRelationDto>>,
+    antonyms: Option<Vec<PartialLexicalRelationDto>>,
     reference_image_url: Option<String>,
     examples: Option<Vec<LookupExampleDto>>,
     source: Option<String>,
     warnings: Option<Vec<String>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct PartialLexicalRelationDto {
+    term: Option<String>,
+    translation: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -274,12 +280,12 @@ fn translate_gemini_provider_message(message: &str) -> String {
         || lower_message.contains("credential")
         || lower_message.contains("permission")
     {
-        return "A chave do Gemini parece invalida ou sem permissao. Confira a chave nas configuracoes."
+        return "A chave do Gemini parece inválida ou sem permissão. Confira a chave nas configurações."
             .to_string();
     }
 
     if lower_message.contains("model") && lower_message.contains("not found") {
-        return "O modelo configurado do Gemini nao esta disponivel para esta chave.".to_string();
+        return "O modelo configurado do Gemini não está disponível para esta chave.".to_string();
     }
 
     message.to_string()
@@ -287,7 +293,7 @@ fn translate_gemini_provider_message(message: &str) -> String {
 
 fn build_prompt(text: &str) -> String {
     format!(
-        "Return only valid JSON. Analyze this English text for a Brazilian learner. query must preserve the full text. translation must be the full pt-BR translation of query. meaning and contextual_explanation must be in English. meaning_translation and contextual_explanation_translation must be pt-BR. For phrases use pronunciation:null and ipa:null. Shape: {{\"query\":\"\",\"word\":\"\",\"translation\":\"\",\"meaning\":\"\",\"meaning_translation\":\"\",\"contextual_explanation\":\"\",\"contextual_explanation_translation\":\"\",\"pronunciation\":null,\"ipa\":null,\"part_of_speech\":null,\"examples\":[{{\"original_text\":\"\",\"translated_text\":\"\"}}],\"source\":\"gemini\",\"warnings\":[]}}. Text: {text}"
+        "Return only valid JSON. Analyze this English text for a Brazilian learner. query must preserve the full text. translation must be the full pt-BR translation of query. meaning and contextual_explanation must be in English. meaning_translation and contextual_explanation_translation must be pt-BR. For a single English word, include 2-5 synonyms and 1-3 antonyms with pt-BR translations when useful. For phrases, synonyms and antonyms can be empty. Shape: {{\"query\":\"\",\"word\":\"\",\"translation\":\"\",\"meaning\":\"\",\"meaning_translation\":\"\",\"contextual_explanation\":\"\",\"contextual_explanation_translation\":\"\",\"part_of_speech\":null,\"synonyms\":[{{\"term\":\"\",\"translation\":\"\"}}],\"antonyms\":[{{\"term\":\"\",\"translation\":\"\"}}],\"examples\":[{{\"original_text\":\"\",\"translated_text\":\"\"}}],\"source\":\"gemini\",\"warnings\":[]}}. Text: {text}"
     )
 }
 
@@ -381,7 +387,7 @@ fn parse_lookup_response(query: &str, response: &str) -> AppResult<LookupResultD
         Err(_) => {
             return Ok(fallback_lookup(
             query,
-            "Nao foi possivel interpretar a resposta completa da IA. A traducao basica sera usada quando disponivel.",
+            "Não foi possível interpretar a resposta completa da IA. A tradução básica será usada quando disponível.",
         ));
         }
     };
@@ -394,7 +400,7 @@ fn parse_lookup_json(response: &str) -> AppResult<PartialLookupResultDto> {
         .or_else(|_| serde_json::from_str::<PartialLookupResultDto>(&clean_markdown_json(response)))
         .or_else(|_| {
             extract_json_object(response)
-                .ok_or_else(|| AppError::new("invalid_lookup_response", "JSON nao encontrado."))
+                .ok_or_else(|| AppError::new("invalid_lookup_response", "JSON não encontrado."))
                 .and_then(|json| {
                     serde_json::from_str::<PartialLookupResultDto>(&json).map_err(|error| {
                         AppError::new("invalid_lookup_response", error.to_string())
@@ -430,19 +436,19 @@ fn fallback_lookup(query: &str, warning: &str) -> LookupResultDto {
     LookupResultDto {
         query: query.to_string(),
         word: word.clone(),
-        translation: "Traducao indisponivel".to_string(),
-        meaning: "Nao foi possivel obter o significado automaticamente.".to_string(),
+        translation: "Tradução indisponível".to_string(),
+        meaning: "Não foi possível obter o significado automaticamente.".to_string(),
         meaning_translation: Some(
-            "Nao foi possivel traduzir o significado automaticamente.".to_string(),
+            "Não foi possível traduzir o significado automaticamente.".to_string(),
         ),
-        contextual_explanation: "Configure a chave do Gemini para receber explicacao contextual."
+        contextual_explanation: "Configure a chave do Gemini para receber explicação contextual."
             .to_string(),
         contextual_explanation_translation: Some(
-            "Configure a chave do Gemini para receber uma explicacao contextual.".to_string(),
+            "Configure a chave do Gemini para receber uma explicação contextual.".to_string(),
         ),
-        pronunciation: None,
-        ipa: None,
         part_of_speech: None,
+        synonyms: Vec::new(),
+        antonyms: Vec::new(),
         reference_image_url: None,
         examples: vec![LookupExampleDto {
             original_text: query.to_string(),
@@ -467,14 +473,14 @@ fn normalize_result(query: &str, result: PartialLookupResultDto) -> AppResult<Lo
         .filter(|value| !value.is_empty())
         .map(str::to_string)
         .unwrap_or_else(|| infer_main_word(&query));
-    let translation = required_or_fallback(result.translation.as_deref(), "Traducao indisponivel");
+    let translation = required_or_fallback(result.translation.as_deref(), "Tradução indisponível");
     let meaning = required_or_fallback(
         result.meaning.as_deref(),
-        "A IA nao informou o significado desta consulta.",
+        "A IA não informou o significado desta consulta.",
     );
     let contextual_explanation = required_or_fallback(
         result.contextual_explanation.as_deref(),
-        "A IA nao informou uma explicacao contextual para esta consulta.",
+        "A IA não informou uma explicação contextual para esta consulta.",
     );
     let mut warnings = result.warnings.unwrap_or_default();
 
@@ -484,9 +490,11 @@ fn normalize_result(query: &str, result: PartialLookupResultDto) -> AppResult<Lo
         .is_none_or(|value| value.trim().is_empty())
     {
         warnings.push(
-            "A IA nao informou o campo word; a consulta foi usada como fallback.".to_string(),
+            "A IA não informou o campo word; a consulta foi usada como fallback.".to_string(),
         );
     }
+    let synonyms = normalize_lexical_relations(result.synonyms, &word);
+    let antonyms = normalize_lexical_relations(result.antonyms, &word);
 
     let mut normalized = LookupResultDto {
         query: ai_query
@@ -505,9 +513,9 @@ fn normalize_result(query: &str, result: PartialLookupResultDto) -> AppResult<Lo
             .contextual_explanation_translation
             .map(|value| value.trim().to_string())
             .filter(|value| !value.is_empty()),
-        pronunciation: result.pronunciation,
-        ipa: result.ipa,
         part_of_speech: result.part_of_speech,
+        synonyms,
+        antonyms,
         reference_image_url: result.reference_image_url,
         examples: result.examples.unwrap_or_default(),
         source: result.source.unwrap_or_else(|| GEMINI_MODEL.to_string()),
@@ -525,11 +533,6 @@ fn normalize_result(query: &str, result: PartialLookupResultDto) -> AppResult<Lo
     normalized
         .warnings
         .retain(|warning| !warning.trim().is_empty());
-    if is_phrase(&normalized.query) {
-        normalized.pronunciation = None;
-        normalized.ipa = None;
-    }
-
     if normalized.examples.is_empty() {
         normalized.examples.push(LookupExampleDto {
             original_text: normalized.query.clone(),
@@ -542,6 +545,47 @@ fn normalize_result(query: &str, result: PartialLookupResultDto) -> AppResult<Lo
     }
 
     Ok(normalized)
+}
+
+fn normalize_lexical_relations(
+    values: Option<Vec<PartialLexicalRelationDto>>,
+    current_word: &str,
+) -> Vec<LookupLexicalRelationDto> {
+    let current_word = current_word.trim().to_lowercase();
+    let mut seen = std::collections::HashSet::new();
+    let mut result = Vec::new();
+
+    for value in values.unwrap_or_default() {
+        let Some(term) = value
+            .term
+            .map(|term| term.trim().to_string())
+            .filter(|term| !term.is_empty())
+        else {
+            continue;
+        };
+
+        let normalized_term = term.trim().to_lowercase();
+        if normalized_term == current_word
+            || is_phrase(&normalized_term)
+            || !seen.insert(normalized_term)
+        {
+            continue;
+        }
+
+        result.push(LookupLexicalRelationDto {
+            term,
+            translation: value
+                .translation
+                .map(|translation| translation.trim().to_string())
+                .filter(|translation| !translation.is_empty()),
+        });
+
+        if result.len() >= 6 {
+            break;
+        }
+    }
+
+    result
 }
 
 fn is_phrase(text: &str) -> bool {

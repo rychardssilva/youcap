@@ -40,7 +40,7 @@ pub async fn translate_en_to_pt_br(text: &str) -> AppResult<Option<String>> {
             if error.is_timeout() {
                 AppError::new(
                     "translation_timeout",
-                    "A traducao demorou demais para responder.",
+                    "A tradução demorou demais para responder.",
                 )
             } else {
                 AppError::new("translation_provider_error", error.to_string())

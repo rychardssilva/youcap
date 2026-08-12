@@ -1,22 +1,28 @@
-# Immersion Vocabulary
+# Yocab
 
-Aplicativo desktop para criar vocabulario em ingles a partir de conteudos reais, como videos, sites, jogos, PDFs e outras janelas do Windows.
+Aplicativo desktop para criar vocabulário em inglês a partir de conteúdos reais, como vídeos, sites, jogos, PDFs e outras janelas do Windows.
 
-O objetivo do projeto e reduzir a friccao entre encontrar uma palavra desconhecida e transforma-la em material de estudo. O usuario captura uma area da tela, revisa o texto reconhecido, recebe traducao contextual e pode salvar palavras ou frases em uma biblioteca local.
+O objetivo do projeto é reduzir a fricção entre encontrar uma palavra desconhecida e transformá-la em material de estudo. O usuário captura uma área da tela, revisa o texto reconhecido, recebe tradução contextual e pode salvar palavras ou frases em uma biblioteca local.
+
+## Origem do nome
+
+- **Yomu** -> leitura
+- **Vocabulary** -> vocabulário
+- **Yocab** -> construir vocabulário através daquilo que você lê.
 
 ## Principais Funcionalidades
 
-- Captura de area da tela pelo aplicativo ou por atalho global.
+- Captura de área da tela pelo aplicativo ou por atalho global.
 - OCR externo para reconhecer texto em imagens.
-- Revisao manual do texto reconhecido antes da consulta.
-- Traducao contextual com IA e fallback gratuito de traducao.
-- Popup de consulta com traducao, explicacao, exemplos e imagem de referencia quando aplicavel.
+- Revisão manual do texto reconhecido antes da consulta.
+- Tradução contextual com IA e fallback gratuito de tradução.
+- Popup de consulta com tradução, explicação, exemplos e imagem de referência quando aplicável.
 - Biblioteca local de palavras e frases salvas.
-- Pagina da palavra com traducoes, exemplos, imagens, historico, tags e dados editaveis.
-- Caderno de anotacoes para observacoes, frases proprias e tags.
-- Tela de revisao com modos ingles-portugues, portugues-ingles, contexto e imagem.
-- Configuracoes persistentes para tema, idioma, atalho e chaves de providers.
-- Banco SQLite local com migrations automaticas.
+- Página da palavra com traduções, exemplos, imagens, histórico, tags e dados editáveis.
+- Caderno de anotações para observações, frases próprias e tags.
+- Tela de revisão com modos inglês-português, português-inglês, contexto e imagem.
+- Configurações persistentes para tema, idioma, atalho e chaves de providers.
+- Banco SQLite local com migrations automáticas.
 
 ## Stack
 
@@ -35,15 +41,15 @@ O objetivo do projeto e reduzir a friccao entre encontrar uma palavra desconheci
 ## Providers
 
 - OCR: OCR.space API
-- Traducao e IA contextual: Gemini API
-- Fallback de traducao: MyMemory
+- Tradução e IA contextual: Gemini API
+- Fallback de tradução: MyMemory
 - Imagens: Pexels como provider principal e Wikipedia como fallback
 
 ## Estrutura
 
-- `app/`: aplicacao Tauri com frontend React e nucleo Rust.
+- `app/`: aplicação Tauri com frontend React e núcleo Rust.
 - `app/src/`: interface, telas, stores, schemas e services do frontend.
-- `app/src-tauri/`: comandos Tauri, services, providers, repositories, migrations e integracao com SQLite.
+- `app/src-tauri/`: comandos Tauri, services, providers, repositories, migrations e integração com SQLite.
 - `app/data/`: dados locais de desenvolvimento, ignorados pelo Git.
 
 ## Requisitos
@@ -56,7 +62,7 @@ O objetivo do projeto e reduzir a friccao entre encontrar uma palavra desconheci
   - `GEMINI_API_KEY`
   - `PEXELS_API_KEY`
 
-As chaves tambem podem ser configuradas pela tela de Configuracoes do aplicativo.
+As chaves também podem ser configuradas pela tela de Configurações do aplicativo.
 
 ## Desenvolvimento
 
@@ -67,7 +73,7 @@ npm install
 npm run tauri:dev
 ```
 
-Comandos uteis:
+Comandos úteis:
 
 ```powershell
 npm run dev
@@ -81,6 +87,6 @@ npm run cargo:test
 
 ## Status
 
-O projeto esta em fase de MVP funcional. O fluxo principal ja cobre captura, OCR, consulta contextual, salvamento local, biblioteca, pagina da palavra, caderno, imagens de referencia e revisao.
+O projeto já possui um fluxo principal funcional com captura, OCR, consulta contextual, salvamento local, biblioteca, página da palavra, caderno, imagens de referência e revisão.
 
-Ainda nao ha instalador final publicado; a distribuicao sera preparada depois da estabilizacao completa.
+Ainda não há instalador final publicado; a distribuição será preparada depois da estabilização completa.
