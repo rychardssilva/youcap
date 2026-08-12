@@ -1,22 +1,11 @@
 import { useEffect, useState } from "react";
-import {
-  Crosshair,
-  Keyboard,
-  Languages,
-  Loader2,
-  MessageSquareText,
-  MonitorUp,
-  Power,
-  PowerOff,
-} from "lucide-react";
+import { Crosshair, Keyboard, Loader2, MonitorUp, Power, PowerOff } from "lucide-react";
 
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { openCaptureOverlay } from "@/services/capture-service";
-import { lookupText } from "@/services/lookup-service";
 import { defaultCaptureShortcut, useShortcutStore } from "@/stores/shortcut-store";
 import { useToastStore } from "@/stores/toast-store";
-
 
 export function CapturePage() {
   const addToast = useToastStore((state) => state.addToast);
@@ -27,8 +16,6 @@ export function CapturePage() {
   const registerShortcut = useShortcutStore((state) => state.registerShortcut);
   const unregisterShortcut = useShortcutStore((state) => state.unregisterShortcut);
   const [isOpening, setIsOpening] = useState(false);
-  const [lookupInput, setLookupInput] = useState("I ran out of time");
-  const [isLookingUp, setIsLookingUp] = useState(false);
 
   useEffect(() => {
     void loadShortcutStatus();
@@ -80,26 +67,6 @@ export function CapturePage() {
       });
     } finally {
       setIsOpening(false);
-    }
-  }
-
-  async function handleLookupText() {
-    try {
-      setIsLookingUp(true);
-      await lookupText(lookupInput);
-      addToast({
-        variant: "success",
-        title: "Consulta criada",
-        description: "O popup contextual foi aberto com o resultado.",
-      });
-    } catch {
-      addToast({
-        variant: "error",
-        title: "Erro na consulta",
-        description: "Não foi possível consultar esse texto agora.",
-      });
-    } finally {
-      setIsLookingUp(false);
     }
   }
 
@@ -177,33 +144,6 @@ export function CapturePage() {
             )}
             Iniciar captura
           </button>
-        </div>
-      </section>
-
-      <section className="surface p-5">
-        <div className="flex items-center gap-3">
-          <div className="flex size-8 items-center justify-center rounded-md bg-muted">
-            <Languages className="size-4 text-muted-foreground" aria-hidden="true" />
-          </div>
-          <div>
-            <h2 className="font-medium">Consulta contextual</h2>
-            <p className="text-sm text-muted-foreground">
-              Entrada temporária para testar o provider de IA antes da etapa de OCR.
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_160px]">
-          <input
-            className="field w-full"
-            value={lookupInput}
-            onChange={(event) => setLookupInput(event.currentTarget.value)}
-            aria-label="Texto para consulta contextual"
-          />
-          <Button type="button" isLoading={isLookingUp} onClick={handleLookupText}>
-            <MessageSquareText className="size-4" aria-hidden="true" />
-            Consultar
-          </Button>
         </div>
       </section>
 

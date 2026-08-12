@@ -1,25 +1,23 @@
 import { type KeyboardEvent as ReactKeyboardEvent, useEffect, useState } from "react";
 import {
-  Database,
   Edit3,
+  ExternalLink,
+  HelpCircle,
   KeyRound,
   Keyboard,
   Languages,
+  MessageSquareText,
   Monitor,
-  Plus,
   Save,
   ServerCog,
 } from "lucide-react";
+import { openUrl } from "@tauri-apps/plugin-opener";
 
 import { Button } from "@/components/ui/button";
 import { userMessage } from "@/lib/user-message";
-import {
-  createWord,
-  getDatabaseHealth,
-  type DatabaseHealth,
-  type Word,
-} from "@/services/database-service";
+import { lookupText } from "@/services/lookup-service";
 import { listSettings, upsertSetting } from "@/services/settings-service";
+import { useOnboardingStore } from "@/stores/onboarding-store";
 import { defaultCaptureShortcut, useShortcutStore } from "@/stores/shortcut-store";
 import { useThemeStore } from "@/stores/theme-store";
 import { useToastStore } from "@/stores/toast-store";
@@ -31,18 +29,21 @@ const providerSettings = [
   { key: "image_provider", label: "Imagens", value: "Pexels + Wikipedia", icon: ServerCog },
 ];
 
+const apiGuideUrl =
+  "https://docs.google.com/document/d/1Y5fqx_ABCPKW2rb1c6CsdQSU46AQFO3_DoMqLuIfjDw/edit?usp=sharing";
+
 export function SettingsPage() {
   const { theme, setTheme } = useThemeStore();
   const addToast = useToastStore((state) => state.addToast);
+  const openOnboarding = useOnboardingStore((state) => state.openOnboarding);
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const [isSavingProviders, setIsSavingProviders] = useState(false);
-  const [isCheckingDatabase, setIsCheckingDatabase] = useState(false);
-  const [isCreatingWord, setIsCreatingWord] = useState(false);
-  const [databaseHealth, setDatabaseHealth] = useState<DatabaseHealth | null>(null);
-  const [lastWord, setLastWord] = useState<Word | null>(null);
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [geminiApiKey, setGeminiApiKey] = useState("");
   const [ocrSpaceApiKey, setOcrSpaceApiKey] = useState("");
   const [pexelsApiKey, setPexelsApiKey] = useState("");
+  const [lookupInput, setLookupInput] = useState("I ran out of time");
+  const [isLookingUp, setIsLookingUp] = useState(false);
   const shortcut = useShortcutStore((state) => state.shortcut);
   const shortcutRegistered = useShortcutStore((state) => state.registered);
   const shortcutIsLoading = useShortcutStore((state) => state.isLoading);
@@ -89,6 +90,7 @@ export function SettingsPage() {
 
   async function updateThemePreference(nextTheme: "light" | "dark") {
     setTheme(nextTheme);
+
     try {
       await upsertSetting("theme", nextTheme);
     } catch (err) {
@@ -144,50 +146,6 @@ export function SettingsPage() {
     }
   }
 
-  async function checkDatabase() {
-    try {
-      setIsCheckingDatabase(true);
-      const health = await getDatabaseHealth();
-      setDatabaseHealth(health);
-      addToast({
-        variant: "success",
-        title: "Banco local pronto",
-        description: `Palavras: ${health.words_count} | Configurações: ${health.settings_count}`,
-      });
-    } catch (err) {
-      addToast({
-        variant: "error",
-        title: "Erro no banco local",
-        description: userMessage(errorMessage(err)),
-      });
-    } finally {
-      setIsCheckingDatabase(false);
-    }
-  }
-
-  async function createTestWord() {
-    try {
-      setIsCreatingWord(true);
-      const word = await createWord("context");
-      const health = await getDatabaseHealth();
-      setLastWord(word);
-      setDatabaseHealth(health);
-      addToast({
-        variant: "success",
-        title: "Palavra de teste salva",
-        description: `"${word.term}" foi persistida no SQLite.`,
-      });
-    } catch (err) {
-      addToast({
-        variant: "error",
-        title: "Erro ao salvar palavra",
-        description: userMessage(errorMessage(err)),
-      });
-    } finally {
-      setIsCreatingWord(false);
-    }
-  }
-
   async function saveProviderSettings() {
     try {
       setIsSavingProviders(true);
@@ -209,6 +167,42 @@ export function SettingsPage() {
       });
     } finally {
       setIsSavingProviders(false);
+    }
+  }
+
+  async function openApiGuide() {
+    try {
+      if ("__TAURI_INTERNALS__" in window) {
+        await openUrl(apiGuideUrl);
+      } else {
+        window.open(apiGuideUrl, "_blank", "noopener,noreferrer");
+      }
+    } catch (err) {
+      addToast({
+        variant: "error",
+        title: "Não foi possível abrir o guia",
+        description: userMessage(errorMessage(err)),
+      });
+    }
+  }
+
+  async function handleLookupText() {
+    try {
+      setIsLookingUp(true);
+      await lookupText(lookupInput);
+      addToast({
+        variant: "success",
+        title: "Consulta criada",
+        description: "O popup contextual foi aberto com o resultado.",
+      });
+    } catch (err) {
+      addToast({
+        variant: "error",
+        title: "Erro na consulta",
+        description: userMessage(errorMessage(err)),
+      });
+    } finally {
+      setIsLookingUp(false);
     }
   }
 
@@ -264,9 +258,7 @@ export function SettingsPage() {
               <Keyboard className="size-5 text-primary" aria-hidden="true" />
               <h3 className="text-sm font-medium">Atalho do teclado</h3>
             </div>
-            <div
-              className="mt-4 flex h-11 min-w-0 items-center rounded-md border border-input bg-background"
-            >
+            <div className="mt-4 flex h-11 min-w-0 items-center rounded-md border border-input bg-background">
               <button
                 className="flex h-full min-w-0 flex-1 items-center overflow-hidden px-2 text-left text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 type="button"
@@ -345,107 +337,130 @@ export function SettingsPage() {
       ) : null}
 
       <section className="surface p-5">
-        <h2 className="font-medium">Providers</h2>
-        <div className="mt-4 grid gap-3">
-          {providerSettings.map((item) => (
-            <div
-              key={item.key}
-              className="surface-soft flex items-center justify-between gap-4 p-4"
-            >
-              <div className="flex items-center gap-3">
-                <item.icon className="size-5 text-primary" aria-hidden="true" />
-                <p className="text-sm font-medium">{item.label}</p>
-              </div>
-              <p className="text-sm text-muted-foreground">{item.value}</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="surface-soft mt-4 p-4">
-          <div className="flex items-center gap-3">
-            <KeyRound className="size-5 text-primary" aria-hidden="true" />
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <HelpCircle className="mt-0.5 size-5 text-primary" aria-hidden="true" />
             <div>
-              <p className="text-sm font-medium">Chaves gratuitas dos providers</p>
-              <p className="text-sm text-muted-foreground">
-                Também podem ser definidas por OCR_SPACE_API_KEY, GEMINI_API_KEY e PEXELS_API_KEY.
+              <h2 className="font-medium">Tutorial do Yocab</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Reveja o passo a passo inicial de captura, popup, Biblioteca e Caderno.
               </p>
             </div>
           </div>
-          <div className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_140px]">
-            <input
-              className="field w-full"
-              value={ocrSpaceApiKey}
-              onChange={(event) => setOcrSpaceApiKey(event.currentTarget.value)}
-              placeholder="Chave do OCR.space"
-              aria-label="Chave da API OCR.space"
-            />
-            <div className="hidden xl:block" />
-            <input
-              className="field w-full"
-              value={geminiApiKey}
-              onChange={(event) => setGeminiApiKey(event.currentTarget.value)}
-              placeholder="Chave do Gemini"
-              aria-label="Chave da API Gemini"
-            />
-            <div className="hidden xl:block" />
-            <input
-              className="field w-full"
-              value={pexelsApiKey}
-              onChange={(event) => setPexelsApiKey(event.currentTarget.value)}
-              placeholder="Chave do Pexels"
-              aria-label="Chave da API Pexels"
-            />
-            <Button isLoading={isSavingProviders} onClick={saveProviderSettings}>
-              <Save className="size-4" aria-hidden="true" />
-              Salvar
-            </Button>
-          </div>
+          <Button variant="outline" type="button" onClick={openOnboarding}>
+            Ver tutorial
+          </Button>
         </div>
       </section>
 
       <section className="surface p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Database className="size-5 text-primary" aria-hidden="true" />
-            <h2 className="font-medium">Banco local</h2>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" isLoading={isCheckingDatabase} onClick={checkDatabase}>
-              Validar banco
-            </Button>
-            <Button isLoading={isCreatingWord} onClick={createTestWord}>
-              <Plus className="size-4" aria-hidden="true" />
-              Criar palavra teste
-            </Button>
-          </div>
-        </div>
-
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="surface-soft p-4">
-            <p className="text-xs text-muted-foreground">Status</p>
-            <p className="mt-1 text-sm font-medium">
-              {databaseHealth?.status ?? "Aguardando validação"}
+          <div>
+            <h2 className="font-medium">Providers</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              OCR, IA e imagens usam chaves pessoais salvas apenas neste computador.
             </p>
           </div>
-          <div className="surface-soft p-4">
-            <p className="text-xs text-muted-foreground">Palavras</p>
-            <p className="mt-1 text-sm font-medium">{databaseHealth?.words_count ?? 0}</p>
-          </div>
-          <div className="surface-soft p-4">
-            <p className="text-xs text-muted-foreground">Consultas</p>
-            <p className="mt-1 text-sm font-medium">{databaseHealth?.lookups_count ?? 0}</p>
-          </div>
-          <div className="surface-soft p-4">
-            <p className="text-xs text-muted-foreground">Configurações</p>
-            <p className="mt-1 text-sm font-medium">{databaseHealth?.settings_count ?? 0}</p>
-          </div>
+          <Button
+            variant="outline"
+            type="button"
+            onClick={() => setShowAdvancedSettings((isVisible) => !isVisible)}
+            aria-expanded={showAdvancedSettings}
+          >
+            Configurações avançadas
+          </Button>
         </div>
 
-        {lastWord ? (
-          <p className="mt-4 text-sm text-muted-foreground">
-            Última palavra criada:{" "}
-            <span className="font-medium text-foreground">{lastWord.term}</span>
-          </p>
+        {showAdvancedSettings ? (
+          <div className="mt-4 space-y-4">
+            <div className="grid gap-3">
+              {providerSettings.map((item) => (
+                <div
+                  key={item.key}
+                  className="surface-soft flex items-center justify-between gap-4 p-4"
+                >
+                  <div className="flex items-center gap-3">
+                    <item.icon className="size-5 text-primary" aria-hidden="true" />
+                    <p className="text-sm font-medium">{item.label}</p>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{item.value}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="surface-soft p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <KeyRound className="size-5 text-primary" aria-hidden="true" />
+                  <div>
+                    <p className="text-sm font-medium">Chaves gratuitas dos providers</p>
+                    <p className="text-sm text-muted-foreground">
+                      Também podem ser definidas por OCR_SPACE_API_KEY, GEMINI_API_KEY e
+                      PEXELS_API_KEY.
+                    </p>
+                  </div>
+                </div>
+                <Button variant="outline" type="button" onClick={() => void openApiGuide()}>
+                  <ExternalLink className="size-4" aria-hidden="true" />
+                  Guia das chaves
+                </Button>
+              </div>
+              <div className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_140px]">
+                <input
+                  className="field w-full"
+                  value={ocrSpaceApiKey}
+                  onChange={(event) => setOcrSpaceApiKey(event.currentTarget.value)}
+                  placeholder="Chave do OCR.space"
+                  aria-label="Chave da API OCR.space"
+                />
+                <div className="hidden xl:block" />
+                <input
+                  className="field w-full"
+                  value={geminiApiKey}
+                  onChange={(event) => setGeminiApiKey(event.currentTarget.value)}
+                  placeholder="Chave do Gemini"
+                  aria-label="Chave da API Gemini"
+                />
+                <div className="hidden xl:block" />
+                <input
+                  className="field w-full"
+                  value={pexelsApiKey}
+                  onChange={(event) => setPexelsApiKey(event.currentTarget.value)}
+                  placeholder="Chave do Pexels"
+                  aria-label="Chave da API Pexels"
+                />
+                <Button isLoading={isSavingProviders} onClick={saveProviderSettings}>
+                  <Save className="size-4" aria-hidden="true" />
+                  Salvar
+                </Button>
+              </div>
+            </div>
+
+            <div className="surface-soft p-4">
+              <div className="flex items-center gap-3">
+                <MessageSquareText className="size-5 text-primary" aria-hidden="true" />
+                <div>
+                  <p className="text-sm font-medium">Teste de consulta contextual</p>
+                  <p className="text-sm text-muted-foreground">
+                    Entrada temporária para validar tradução e IA sem passar pela captura.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_140px]">
+                <input
+                  className="field w-full"
+                  value={lookupInput}
+                  onChange={(event) => setLookupInput(event.currentTarget.value)}
+                  aria-label="Texto para teste de consulta contextual"
+                />
+                <Button type="button" isLoading={isLookingUp} onClick={handleLookupText}>
+                  <MessageSquareText className="size-4" aria-hidden="true" />
+                  Consultar
+                </Button>
+              </div>
+            </div>
+          </div>
         ) : null}
       </section>
     </div>

@@ -67,6 +67,10 @@ fn validate_setting_value(key: &str, value: &str) -> AppResult<()> {
             "validation_error",
             "O atalho global precisa ter ao menos um modificador e uma tecla.",
         )),
+        "onboarding_completed" if !matches!(value, "true" | "false") => Err(AppError::new(
+            "validation_error",
+            "O status do tutorial precisa ser true ou false.",
+        )),
         _ => Ok(()),
     }
 }
