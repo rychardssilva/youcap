@@ -540,6 +540,15 @@ async fn settings_validate_theme_language_providers_and_shortcut() {
     )
     .await
     .unwrap();
+    settings_service::upsert_setting(
+        &pool,
+        UpsertSettingRequest {
+            key: "onboarding_completed".to_string(),
+            value: "true".to_string(),
+        },
+    )
+    .await
+    .unwrap();
 
     let invalid_theme = settings_service::upsert_setting(
         &pool,
@@ -573,11 +582,20 @@ async fn settings_validate_theme_language_providers_and_shortcut() {
         },
     )
     .await;
+    let invalid_onboarding = settings_service::upsert_setting(
+        &pool,
+        UpsertSettingRequest {
+            key: "onboarding_completed".to_string(),
+            value: "yes".to_string(),
+        },
+    )
+    .await;
 
     assert!(invalid_theme.is_err());
     assert!(invalid_language.is_err());
     assert!(invalid_provider.is_err());
     assert!(invalid_shortcut.is_err());
+    assert!(invalid_onboarding.is_err());
 }
 
 #[tokio::test]

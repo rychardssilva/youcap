@@ -14,6 +14,7 @@ import { WordPage } from "@/features/word-page/word-page";
 import { cn } from "@/lib/utils";
 import { userMessage } from "@/lib/user-message";
 import { useNavigationStore } from "@/stores/navigation-store";
+import { defaultCaptureShortcut, useShortcutStore } from "@/stores/shortcut-store";
 import { useThemeStore } from "@/stores/theme-store";
 import { useToastStore } from "@/stores/toast-store";
 
@@ -61,11 +62,21 @@ export function AppShell() {
   const setSelectedWordId = useNavigationStore((state) => state.setSelectedWordId);
   const { theme, toggleTheme } = useThemeStore();
   const addToast = useToastStore((state) => state.addToast);
+  const shortcut = useShortcutStore((state) => state.shortcut);
+  const loadShortcutStatus = useShortcutStore((state) => state.loadShortcutStatus);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const storedWidth = Number(window.localStorage.getItem(sidebarWidthStorageKey));
 
     return Number.isFinite(storedWidth) ? clampSidebarWidth(storedWidth) : defaultSidebarWidth;
   });
+
+  useEffect(() => {
+    if (!("__TAURI_INTERNALS__" in window)) {
+      return;
+    }
+
+    void loadShortcutStatus();
+  }, [loadShortcutStatus]);
 
   useEffect(() => {
     if (!("__TAURI_INTERNALS__" in window)) {
@@ -225,9 +236,14 @@ export function AppShell() {
                 <span>Atalho de captura</span>
               </div>
               <div className="mt-2 flex items-center gap-2 text-foreground">
-                <kbd className="rounded border bg-background px-1.5 py-0.5 text-[11px]">Ctrl</kbd>
-                <kbd className="rounded border bg-background px-1.5 py-0.5 text-[11px]">Shift</kbd>
-                <kbd className="rounded border bg-background px-1.5 py-0.5 text-[11px]">E</kbd>
+                {shortcutParts(shortcut || defaultCaptureShortcut).map((part, index) => (
+                  <span className="flex items-center gap-1" key={`${part}-${index}`}>
+                    {index > 0 ? <span className="text-muted-foreground">+</span> : null}
+                    <kbd className="rounded border bg-background px-1.5 py-0.5 text-[11px]">
+                      {part}
+                    </kbd>
+                  </span>
+                ))}
               </div>
             </div>
           </div>
@@ -266,4 +282,16 @@ export function AppShell() {
 
 function clampSidebarWidth(width: number) {
   return Math.min(maxSidebarWidth, Math.max(minSidebarWidth, Math.round(width)));
+}
+
+function shortcutParts(shortcut: string) {
+  return shortcut
+    .replace(/CommandOrControl/gi, "Ctrl")
+    .replace(/Control/gi, "Ctrl")
+    .replace(/Command/gi, "Cmd")
+    .replace(/Alt/gi, "Alt")
+    .replace(/Shift/gi, "Shift")
+    .split("+")
+    .map((part) => part.trim())
+    .filter(Boolean);
 }
