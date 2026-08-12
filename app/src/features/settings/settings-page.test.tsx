@@ -77,7 +77,14 @@ describe("Configurações do aplicativo", () => {
     expect(screen.getByDisplayValue("ocr-key")).toBeInTheDocument();
     expect(screen.getByDisplayValue("gemini-key")).toBeInTheDocument();
     expect(screen.getByDisplayValue("pexels-key")).toBeInTheDocument();
+    expect(screen.getByLabelText("Idioma de destino")).toHaveTextContent("Português (Brasil)");
+    expect(screen.queryByRole("combobox", { name: "Idioma de destino" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Claro" })).toHaveClass("bg-primary");
+    expect(screen.queryByRole("button", { name: /Salvar Preferências/i })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Escuro" }));
+
+    await waitFor(() => expect(mockUpsertSetting).toHaveBeenCalledWith("theme", "dark"));
 
     await user.click(screen.getByRole("button", { name: "Editar atalho" }));
     await user.keyboard("{Control>}{Alt>}e{/Alt}{/Control}");
@@ -87,11 +94,7 @@ describe("Configurações do aplicativo", () => {
       expect(mockRegisterCaptureShortcut).toHaveBeenCalledWith("CommandOrControl+Alt+E"),
     );
 
-    await user.click(screen.getByRole("button", { name: /Salvar Preferências/i }));
-
-    expect(mockUpsertSetting).toHaveBeenCalledWith("theme", "light");
     expect(mockUpsertSetting).toHaveBeenCalledWith("global_shortcut", "CommandOrControl+Alt+E");
-    expect(mockUpsertSetting).toHaveBeenCalledWith("target_language", "pt-BR");
 
     await user.click(screen.getByRole("button", { name: "Salvar" }));
 

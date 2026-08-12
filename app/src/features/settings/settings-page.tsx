@@ -24,10 +24,6 @@ import { defaultCaptureShortcut, useShortcutStore } from "@/stores/shortcut-stor
 import { useThemeStore } from "@/stores/theme-store";
 import { useToastStore } from "@/stores/toast-store";
 
-const defaultTargetLanguage = "pt-BR";
-
-const targetLanguages = [{ label: "Português (Brasil)", value: "pt-BR" }];
-
 const providerSettings = [
   { key: "system", label: "Sistema inicial", value: "Windows", icon: Monitor },
   { key: "ocr_provider", label: "OCR", value: "OCR.space API", icon: ServerCog },
@@ -39,7 +35,6 @@ export function SettingsPage() {
   const { theme, setTheme } = useThemeStore();
   const addToast = useToastStore((state) => state.addToast);
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
-  const [isSavingPreferences, setIsSavingPreferences] = useState(false);
   const [isSavingProviders, setIsSavingProviders] = useState(false);
   const [isCheckingDatabase, setIsCheckingDatabase] = useState(false);
   const [isCreatingWord, setIsCreatingWord] = useState(false);
@@ -55,7 +50,6 @@ export function SettingsPage() {
   const registerShortcut = useShortcutStore((state) => state.registerShortcut);
   const [isEditingShortcut, setIsEditingShortcut] = useState(false);
   const [draftShortcut, setDraftShortcut] = useState(defaultCaptureShortcut);
-  const [targetLanguage, setTargetLanguage] = useState(defaultTargetLanguage);
 
   useEffect(() => {
     let isMounted = true;
@@ -68,10 +62,6 @@ export function SettingsPage() {
           return;
         }
 
-        setTargetLanguage(
-          settings.find((setting) => setting.key === "target_language")?.value ??
-            defaultTargetLanguage,
-        );
         setGeminiApiKey(settings.find((setting) => setting.key === "gemini_api_key")?.value ?? "");
         setOcrSpaceApiKey(
           settings.find((setting) => setting.key === "ocr_space_api_key")?.value ?? "",
@@ -97,26 +87,16 @@ export function SettingsPage() {
     };
   }, [addToast, loadShortcutStatus]);
 
-  async function savePreferences() {
+  async function updateThemePreference(nextTheme: "light" | "dark") {
+    setTheme(nextTheme);
     try {
-      setIsSavingPreferences(true);
-
-      await upsertSetting("theme", theme);
-      await upsertSetting("target_language", targetLanguage);
-
-      addToast({
-        variant: "success",
-        title: "Preferências salvas",
-        description: "Tema e idioma foram aplicados e persistidos.",
-      });
+      await upsertSetting("theme", nextTheme);
     } catch (err) {
       addToast({
         variant: "error",
-        title: "Erro ao salvar preferências",
+        title: "Erro ao salvar tema",
         description: userMessage(errorMessage(err)),
       });
-    } finally {
-      setIsSavingPreferences(false);
     }
   }
 
@@ -242,10 +222,6 @@ export function SettingsPage() {
               Tema, idioma e atalho usados no fluxo principal.
             </p>
           </div>
-          <Button isLoading={isSavingPreferences} onClick={savePreferences}>
-            <Save className="size-4" aria-hidden="true" />
-            {isSavingPreferences ? "Salvando" : "Salvar Preferências"}
-          </Button>
         </div>
 
         <div className="mt-4 grid gap-4 xl:grid-cols-3">
@@ -257,13 +233,13 @@ export function SettingsPage() {
             <div className="mt-4 grid grid-cols-2 gap-2">
               <Button
                 variant={theme === "light" ? "default" : "outline"}
-                onClick={() => setTheme("light")}
+                onClick={() => void updateThemePreference("light")}
               >
                 Claro
               </Button>
               <Button
                 variant={theme === "dark" ? "default" : "outline"}
-                onClick={() => setTheme("dark")}
+                onClick={() => void updateThemePreference("dark")}
               >
                 Escuro
               </Button>
@@ -275,18 +251,12 @@ export function SettingsPage() {
               <Languages className="size-5 text-primary" aria-hidden="true" />
               <h3 className="text-sm font-medium">Idioma de destino</h3>
             </div>
-            <select
-              className="field mt-4 w-full"
-              value={targetLanguage}
-              onChange={(event) => setTargetLanguage(event.currentTarget.value)}
+            <div
+              className="mt-4 flex h-11 items-center rounded-md border border-input bg-background px-3 text-sm font-medium"
               aria-label="Idioma de destino"
             >
-              {targetLanguages.map((language) => (
-                <option key={language.value} value={language.value}>
-                  {language.label}
-                </option>
-              ))}
-            </select>
+              Português (Brasil)
+            </div>
           </div>
 
           <div className="surface-soft p-4">
