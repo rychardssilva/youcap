@@ -106,6 +106,7 @@ pub async fn lookup_reference_images(term: &str, limit: usize) -> AppResult<Vec<
     let mut images = Vec::new();
 
     for candidate in visual_lookup_terms(&term) {
+        // Ordem proposital: pagina exata primeiro, midias do artigo depois, Commons so como fallback
         if let Some(summary_image) = lookup_summary_image(&client, &candidate, &term).await? {
             images.push(summary_image);
         }

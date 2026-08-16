@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "0.1.0"
+version = "1.0.0"
 description = "Aplicativo desktop para capturar, traduzir e salvar vocabulário de leitura."
 authors = ["Yocab"]
 edition = "2021"
@@ -18,7 +18,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["protocol-asset"] }
+tauri = { version = "2", features = ["protocol-asset", "tray-icon"] }
 tauri-plugin-opener = "2"
 tauri-plugin-single-instance = "2"
 serde = { version = "1", features = ["derive"] }
@@ -28,7 +28,7 @@ chrono = { version = "0.4.45", features = ["serde"] }
 uuid = { version = "1.24.0", features = ["v4", "serde"] }
 sqlx = { version = "0.9.0", features = ["runtime-tokio", "tls-rustls", "sqlite", "macros", "migrate", "chrono", "uuid", "json"] }
 tauri-plugin-global-shortcut = "2.3.2"
-xcap = { version = "0.9.7", features = ["image"] }
+xcap = "0.9.8"
 image = { version = "0.25.10", default-features = false, features = ["jpeg", "png"] }
 windows = { version = "0.62.2", features = ["Win32_Graphics_Dwm", "Win32_UI_WindowsAndMessaging"] }
 reqwest = { version = "0.13.4", default-features = false, features = ["json", "multipart", "query", "rustls"] }

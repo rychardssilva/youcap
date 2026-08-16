@@ -50,6 +50,7 @@ const onboardingSteps = [
       "OCR.space reconhece o texto da imagem.",
       "Gemini ajuda na tradução contextual e explicações.",
       "Pexels melhora as imagens de referência para palavras concretas.",
+      "Esses serviços podem receber a imagem capturada, o texto reconhecido ou termos de busca.",
     ],
   },
   {

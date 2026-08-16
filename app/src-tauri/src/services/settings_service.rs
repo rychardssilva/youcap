@@ -53,15 +53,15 @@ fn validate_setting_value(key: &str, value: &str) -> AppResult<()> {
         )),
         "target_language" if value != "pt-BR" => Err(AppError::new(
             "validation_error",
-            "A versao atual aceita apenas portugues do Brasil como idioma de destino.",
+            "A versão atual aceita apenas português do Brasil como idioma de destino.",
         )),
         "ocr_provider" if value != "ocr_space" => Err(AppError::new(
             "validation_error",
-            "Provider de OCR invalido para a versao atual.",
+            "Provider de OCR inválido para a versão atual.",
         )),
         "ai_provider" if value != "gemini" => Err(AppError::new(
             "validation_error",
-            "Provider de IA invalido para a versao atual.",
+            "Provider de IA inválido para a versão atual.",
         )),
         "global_shortcut" if !looks_like_shortcut(value) => Err(AppError::new(
             "validation_error",
@@ -70,6 +70,10 @@ fn validate_setting_value(key: &str, value: &str) -> AppResult<()> {
         "onboarding_completed" if !matches!(value, "true" | "false") => Err(AppError::new(
             "validation_error",
             "O status do tutorial precisa ser true ou false.",
+        )),
+        "run_in_background" if !matches!(value, "true" | "false") => Err(AppError::new(
+            "validation_error",
+            "A opção de rodar em segundo plano precisa ser true ou false.",
         )),
         _ => Ok(()),
     }

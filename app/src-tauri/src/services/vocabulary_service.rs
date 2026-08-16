@@ -118,13 +118,13 @@ pub async fn update_word_details(
         if frequency_rank < 1 {
             return Err(AppError::new(
                 "validation_error",
-                "A frequencia precisa ser um numero positivo.",
+                "A frequência precisa ser um número positivo.",
             ));
         }
     }
 
     if let Some(frequency_band) = request.frequency_band.as_deref() {
-        validate_optional_field("faixa de frequencia", frequency_band, 80)?;
+        validate_optional_field("faixa de frequência", frequency_band, 80)?;
     }
 
     if let Some(example_original) = request.example_original.as_deref() {
@@ -144,11 +144,11 @@ pub async fn update_word_details(
     }
 
     if let Some(personal_note) = request.personal_note.as_deref() {
-        validate_optional_field("anotacao pessoal", personal_note, 20_000)?;
+        validate_optional_field("anotação pessoal", personal_note, 20_000)?;
     }
 
     if let Some(personal_sentence) = request.personal_sentence.as_deref() {
-        validate_optional_field("frase propria", personal_sentence, 3_000)?;
+        validate_optional_field("frase própria", personal_sentence, 3_000)?;
     }
 
     if let Some(personal_sentence_translation) = request.personal_sentence_translation.as_deref() {
@@ -434,7 +434,7 @@ fn validate_status(status: &str) -> AppResult<()> {
         "new" | "learning" | "difficult" | "known" | "mastered" | "archived" => Ok(()),
         _ => Err(AppError::new(
             "validation_error",
-            "O status da palavra e invalido.",
+            "O status da palavra é inválido.",
         )),
     }
 }

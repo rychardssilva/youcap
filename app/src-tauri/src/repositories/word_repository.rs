@@ -20,8 +20,7 @@ pub async fn create_or_update_word(
     translation: Option<&str>,
     context: Option<&str>,
 ) -> AppResult<Word> {
-    create_or_update_word_with_source(pool, term, language, translation, context, "manual-test")
-        .await
+    create_or_update_word_with_source(pool, term, language, translation, context, "manual").await
 }
 
 pub async fn create_or_update_word_with_source(
@@ -151,6 +150,7 @@ pub async fn search_words(
                   ) AS latest_context,
                   MIN(l.created_at) AS first_lookup_at,
                   MAX(l.created_at) AS last_lookup_at,
+                  -- Evita inflar aparicoes quando joins de traducoes/contextos multiplicam linhas
                   COUNT(DISTINCT l.query || '|' || COALESCE(l.source, '') || '|' || l.created_at) AS lookups_count
                 FROM words w
                 LEFT JOIN translations t ON t.word_id = w.id

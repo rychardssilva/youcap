@@ -7,7 +7,7 @@ export function HistoryPage() {
     <EmptyState
       icon={Clock3}
       title="Histórico vazio"
-      description="As consultas realizadas pelo popup serao registradas aqui com data, palavra, origem e quantidade de aparições."
+      description="As consultas realizadas pelo popup serão registradas aqui com data, palavra, origem e quantidade de aparições."
     />
   );
 }
