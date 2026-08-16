@@ -71,7 +71,7 @@ As chaves devem ser configuradas pela tela de Configurações do aplicativo.
 
 A versão distribuível do Yocab fica disponível em **GitHub Releases**:
 
-https://github.com/rychardssilva/immersion-vocabulary/releases
+https://github.com/rychardssilva/youcap/releases
 
 Para instalar no Windows, baixe o arquivo da versão desejada, por exemplo:
 
