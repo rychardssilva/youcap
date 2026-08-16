@@ -84,8 +84,8 @@ fn open_ocr_review(app_handle: &AppHandle) -> AppResult<()> {
         WebviewUrl::App("index.html#/ocr-review".into()),
     )
     .title("Texto reconhecido")
-    .inner_size(500.0, 420.0)
-    .min_inner_size(420.0, 360.0)
+    .inner_size(640.0, 620.0)
+    .min_inner_size(520.0, 500.0)
     .decorations(true)
     .resizable(true)
     .always_on_top(false)

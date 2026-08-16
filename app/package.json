@@ -1,7 +1,7 @@
 {
   "name": "yocab",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,10 +9,12 @@
     "build": "tsc && vite build",
     "lint": "eslint .",
     "test:ui": "vitest run --pool=forks --maxWorkers=1 --fileParallelism=false",
+    "security:secrets": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/check-secrets.ps1",
     "format": "prettier --write .",
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/tauri-dev.ps1",
+    "cargo:audit": "cargo audit --file src-tauri/Cargo.lock --target-os windows --target-arch x86_64",
     "cargo:check": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/cargo-check.ps1",
     "cargo:test": "cargo test --manifest-path src-tauri/Cargo.toml"
   },

@@ -16,17 +16,20 @@ pub async fn lookup_text(pool: &SqlitePool, text: &str) -> AppResult<LookupResul
     let started_at = Instant::now();
     let normalized_query = normalize_lookup_query(text)?;
     let cache_key = normalized_cache_key(&normalized_query);
+    let api_key = lookup_api_key(pool).await?;
 
     if let Some(result) =
         lookup_cache_repository::find_by_normalized_query(pool, &cache_key).await?
     {
         let mut result = result;
-        enrich_with_reference_image_if_needed(pool, &mut result).await;
-        record_lookup(pool, &result, started_at.elapsed().as_millis() as i64).await?;
-        return Ok(result);
+        // Fallback degradado nao deve mascarar uma consulta melhor quando a chave do Gemini existe
+        if api_key.is_none() || !is_degraded_ai_fallback(&result) {
+            enrich_with_reference_image_if_needed(pool, &mut result).await;
+            record_lookup(pool, &result, started_at.elapsed().as_millis() as i64).await?;
+            return Ok(result);
+        }
     }
 
-    let api_key = lookup_api_key(pool).await?;
     let mut result = match gemini_provider::contextual_lookup(&normalized_query, api_key).await {
         Ok(result) => result,
         Err(error) => fallback_lookup_from_free_translation(&normalized_query, error).await,
@@ -86,6 +89,7 @@ pub async fn save_lookup_result(pool: &SqlitePool, result: &LookupResultDto) -> 
 
     save_lexical_relations(pool, &word.id, "synonym", &result.synonyms, &result.source).await?;
     save_lexical_relations(pool, &word.id, "antonym", &result.antonyms, &result.source).await?;
+    // Frases salvas tambem alimentam palavras isoladas para biblioteca, revisao e caderno
     save_phrase_words(pool, result, &word.id).await?;
 
     Ok(word)
@@ -387,10 +391,21 @@ fn is_translation_suspiciously_short(query: &str, translation: &str) -> bool {
 }
 
 fn is_cacheable_lookup(result: &LookupResultDto) -> bool {
-    !result
-        .translation
-        .trim()
-        .eq_ignore_ascii_case("Tradução indisponível")
+    // Cache so guarda resultado util, erro de API ou traducao incompleta deve poder ser refeito.
+    !is_degraded_ai_fallback(result)
+        && !result
+            .translation
+            .trim()
+            .eq_ignore_ascii_case("Tradução indisponível")
+}
+
+fn is_degraded_ai_fallback(result: &LookupResultDto) -> bool {
+    result.source.contains("fallback")
+        || result.warnings.iter().any(|warning| {
+            warning.contains("Gemini não configurado")
+                || warning.contains("Gemini indisponível")
+                || warning.contains("Gemini API key ausente")
+        })
 }
 
 fn normalize_lookup_query(text: &str) -> AppResult<String> {
@@ -531,6 +546,20 @@ mod tests {
     #[test]
     fn unavailable_translation_is_not_cacheable() {
         let result = local_fallback_lookup("context", "Tradução indisponível", Vec::new());
+
+        assert!(!is_cacheable_lookup(&result));
+    }
+
+    #[test]
+    fn degraded_ai_fallback_is_not_cacheable() {
+        let result = local_fallback_lookup(
+            "through rigorous training programs to increase",
+            "através de rigorosos programas de treinamento para aumentar",
+            vec![
+                "Gemini não configurado; usando tradução gratuita sem explicação por IA."
+                    .to_string(),
+            ],
+        );
 
         assert!(!is_cacheable_lookup(&result));
     }

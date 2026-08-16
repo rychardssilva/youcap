@@ -40,6 +40,7 @@ describe("Configurações do aplicativo", () => {
       { key: "ocr_space_api_key", value: "ocr-key", updated_at: "2026-08-04T10:00:00Z" },
       { key: "gemini_api_key", value: "gemini-key", updated_at: "2026-08-04T10:00:00Z" },
       { key: "pexels_api_key", value: "pexels-key", updated_at: "2026-08-04T10:00:00Z" },
+      { key: "run_in_background", value: "false", updated_at: "2026-08-04T10:00:00Z" },
     ]);
     mockGetCaptureShortcutStatus.mockResolvedValue({
       shortcut: "CommandOrControl+Shift+E",
@@ -79,6 +80,12 @@ describe("Configurações do aplicativo", () => {
 
     await waitFor(() => expect(mockUpsertSetting).toHaveBeenCalledWith("theme", "dark"));
 
+    await user.click(screen.getByRole("button", { name: "Ativar" }));
+
+    await waitFor(() =>
+      expect(mockUpsertSetting).toHaveBeenCalledWith("run_in_background", "true"),
+    );
+
     await user.click(screen.getByRole("button", { name: "Editar atalho" }));
     await user.keyboard("{Control>}{Alt>}e{/Alt}{/Control}");
     await user.click(screen.getByRole("button", { name: "Salvar atalho" }));
@@ -91,7 +98,13 @@ describe("Configurações do aplicativo", () => {
 
     await user.click(screen.getByRole("button", { name: "Configurações avançadas" }));
 
-    expect(screen.getByDisplayValue("ocr-key")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mostrar chaves" })).toBeInTheDocument();
+    expect(screen.getByDisplayValue("ocr-key")).toHaveAttribute("type", "password");
+
+    await user.click(screen.getByRole("button", { name: "Mostrar chaves" }));
+
+    expect(screen.getByRole("button", { name: "Ocultar chaves" })).toBeInTheDocument();
+    expect(screen.getByDisplayValue("ocr-key")).toHaveAttribute("type", "text");
     expect(screen.getByDisplayValue("gemini-key")).toBeInTheDocument();
     expect(screen.getByDisplayValue("pexels-key")).toBeInTheDocument();
 

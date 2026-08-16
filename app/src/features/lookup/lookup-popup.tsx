@@ -5,6 +5,7 @@ import { BookOpen, ExternalLink, ImageIcon, Loader2, Save, SearchX, X } from "lu
 
 import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorState } from "@/components/shared/error-state";
+import { Toaster } from "@/components/shared/toaster";
 import { Button } from "@/components/ui/button";
 import { userMessage } from "@/lib/user-message";
 import {
@@ -14,13 +15,16 @@ import {
   saveLookupResult,
   type LookupResult,
 } from "@/services/lookup-service";
+import { useToastStore } from "@/stores/toast-store";
 
 export function LookupPopup() {
   const [result, setResult] = useState<LookupResult | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [savedResultKey, setSavedResultKey] = useState<string | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [activeQuery, setActiveQuery] = useState(() => initialQueryFromHash());
   const [error, setError] = useState<string | null>(null);
+  const addToast = useToastStore((state) => state.addToast);
 
   useEffect(() => {
     void getCurrentLookupStatus()
@@ -32,6 +36,7 @@ export function LookupPopup() {
     const unlistenStarted = listen<string>("lookup_started", (event) => {
       setActiveQuery(event.payload);
       setResult(null);
+      setSavedResultKey(null);
       setError(null);
       setStatus("loading");
     });
@@ -40,6 +45,7 @@ export function LookupPopup() {
       setError(null);
       setActiveQuery(event.payload.query);
       setResult(event.payload);
+      setSavedResultKey(null);
       setStatus("ready");
     });
 
@@ -62,9 +68,12 @@ export function LookupPopup() {
     }
 
     const timeout = window.setTimeout(() => {
-      const popupWidth = 560;
+      const popupWidth = Math.min(640, Math.max(560, window.screen.availWidth - 48));
       const contentHeight = Math.ceil(document.documentElement.scrollHeight);
-      const popupHeight = Math.min(Math.max(contentHeight, 360), 720);
+      const popupHeight = Math.min(
+        Math.max(contentHeight, status === "ready" ? 640 : 360),
+        Math.max(560, window.screen.availHeight - 96),
+      );
       const left = Math.max(16, window.screen.availWidth - popupWidth - 24);
       const top = 72;
       const popup = getCurrentWindow();
@@ -77,6 +86,11 @@ export function LookupPopup() {
   }, [result, status]);
 
   useEffect(() => {
+    if (status !== "loading") {
+      return;
+    }
+
+    // O popup pode abrir antes do provider terminar, polling para assim que o resultado chega
     const interval = window.setInterval(() => {
       void getCurrentLookupStatus()
         .then((currentStatus) => {
@@ -98,7 +112,7 @@ export function LookupPopup() {
           }
         })
         .catch(() => undefined);
-    }, 350);
+    }, 700);
 
     return () => window.clearInterval(interval);
   }, [activeQuery, result, status]);
@@ -122,6 +136,18 @@ export function LookupPopup() {
     try {
       setIsSaving(true);
       await saveLookupResult(result);
+      setSavedResultKey(lookupResultKey(result));
+      addToast({
+        variant: "success",
+        title: "Salvo com sucesso",
+        description: "Agora você pode abrir os detalhes ou encontrar este item na Biblioteca.",
+      });
+    } catch (err) {
+      addToast({
+        variant: "error",
+        title: "Não foi possível salvar",
+        description: userMessage(errorMessage(err)),
+      });
     } finally {
       setIsSaving(false);
     }
@@ -192,6 +218,7 @@ export function LookupPopup() {
   const isPhrase = result.query.trim().split(/\s+/).filter(Boolean).length > 1;
   const shouldShowReferenceImage =
     isVisualLookupCandidate(result.word) && result.reference_image_url;
+  const isCurrentResultSaved = savedResultKey === lookupResultKey(result);
 
   return (
     <main className="min-h-screen overflow-auto bg-background text-foreground">
@@ -292,6 +319,11 @@ export function LookupPopup() {
         ) : null}
 
         <div className="flex justify-end gap-2 border-t pt-4">
+          {isCurrentResultSaved ? (
+            <p className="mr-auto self-center text-xs text-muted-foreground">
+              Item salvo. Você já pode abrir os detalhes.
+            </p>
+          ) : null}
           <Button variant="outline" onClick={handleDetails} isLoading={isSaving}>
             <ExternalLink className="size-4" aria-hidden="true" />
             Detalhes
@@ -302,6 +334,7 @@ export function LookupPopup() {
           </Button>
         </div>
       </div>
+      <Toaster />
     </main>
   );
 }
@@ -371,12 +404,17 @@ function translatePartOfSpeech(value: string) {
 }
 
 function lookupResultKey(result: LookupResult) {
+  // Chave simples para diferenciar consultas novas sem depender de id ainda nao salvo
   return `${result.query}\u0000${result.word}\u0000${result.translation}\u0000${result.source}`;
 }
 
 function initialQueryFromHash() {
   const queryString = window.location.hash.split("?")[1] ?? "";
   return new URLSearchParams(queryString).get("query") ?? "";
+}
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function applyLookupStatus(

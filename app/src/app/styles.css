@@ -177,6 +177,13 @@
     color: color-mix(in srgb, var(--primary) 82%, var(--foreground));
   }
 
+  .notes-editor mark {
+    border-radius: 4px;
+    background: #fff3a3;
+    color: #1f2937;
+    padding: 0 2px;
+  }
+
   .notes-editor img {
     display: block;
     max-width: min(100%, 520px);

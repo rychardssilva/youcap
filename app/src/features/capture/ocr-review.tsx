@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWindow, LogicalPosition, LogicalSize } from "@tauri-apps/api/window";
 import { FileText, Loader2, MessageSquareText, RotateCcw, X } from "lucide-react";
 
 import { ErrorState } from "@/components/shared/error-state";
@@ -54,6 +55,33 @@ export function OcrReview() {
   }, []);
 
   useEffect(() => {
+    if (!("__TAURI_INTERNALS__" in window)) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      const popupWidth = Math.min(640, Math.max(560, window.screen.availWidth - 48));
+      const contentHeight = Math.ceil(document.documentElement.scrollHeight);
+      const popupHeight = Math.min(
+        Math.max(contentHeight, status === "ready" ? 600 : 360),
+        Math.max(500, window.screen.availHeight - 96),
+      );
+      const left = Math.max(16, window.screen.availWidth - popupWidth - 24);
+      const top = 72;
+      const popup = getCurrentWindow();
+
+      void popup.setSize(new LogicalSize(popupWidth, popupHeight));
+      void popup.setPosition(new LogicalPosition(left, top));
+    }, 60);
+
+    return () => window.clearTimeout(timeout);
+  }, [result, status]);
+
+  useEffect(() => {
+    if (status !== "loading") {
+      return;
+    }
+
     const interval = window.setInterval(() => {
       void getCurrentOcrStatus()
         .then((currentStatus) => {
@@ -77,7 +105,7 @@ export function OcrReview() {
           }
         })
         .catch(() => undefined);
-    }, 350);
+    }, 700);
 
     return () => window.clearInterval(interval);
   }, [activeImagePath, status]);

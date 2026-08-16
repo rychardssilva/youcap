@@ -2,6 +2,8 @@ import { type KeyboardEvent as ReactKeyboardEvent, useEffect, useState } from "r
 import {
   Edit3,
   ExternalLink,
+  Eye,
+  EyeOff,
   HelpCircle,
   KeyRound,
   Keyboard,
@@ -39,6 +41,8 @@ export function SettingsPage() {
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const [isSavingProviders, setIsSavingProviders] = useState(false);
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+  const [showProviderKeys, setShowProviderKeys] = useState(false);
+  const [runInBackground, setRunInBackground] = useState(false);
   const [geminiApiKey, setGeminiApiKey] = useState("");
   const [ocrSpaceApiKey, setOcrSpaceApiKey] = useState("");
   const [pexelsApiKey, setPexelsApiKey] = useState("");
@@ -68,6 +72,9 @@ export function SettingsPage() {
           settings.find((setting) => setting.key === "ocr_space_api_key")?.value ?? "",
         );
         setPexelsApiKey(settings.find((setting) => setting.key === "pexels_api_key")?.value ?? "");
+        setRunInBackground(
+          settings.find((setting) => setting.key === "run_in_background")?.value === "true",
+        );
       } catch (err) {
         addToast({
           variant: "error",
@@ -97,6 +104,28 @@ export function SettingsPage() {
       addToast({
         variant: "error",
         title: "Erro ao salvar tema",
+        description: userMessage(errorMessage(err)),
+      });
+    }
+  }
+
+  async function updateRunInBackgroundPreference(nextValue: boolean) {
+    setRunInBackground(nextValue);
+
+    try {
+      await upsertSetting("run_in_background", String(nextValue));
+      addToast({
+        variant: "success",
+        title: nextValue ? "Segundo plano ativado" : "Segundo plano desativado",
+        description: nextValue
+          ? "Ao fechar a janela principal, o Yocab continuará no ícone da bandeja."
+          : "Ao fechar a janela principal, o Yocab será encerrado.",
+      });
+    } catch (err) {
+      setRunInBackground(!nextValue);
+      addToast({
+        variant: "error",
+        title: "Erro ao salvar segundo plano",
         description: userMessage(errorMessage(err)),
       });
     }
@@ -291,6 +320,23 @@ export function SettingsPage() {
             </p>
           </div>
         </div>
+
+        <div className="surface-soft mt-4 flex flex-wrap items-center justify-between gap-4 p-4">
+          <div className="max-w-xl">
+            <div className="flex items-center gap-2">
+              <Monitor className="size-5 text-primary" aria-hidden="true" />
+              <h3 className="text-sm font-medium">Rodar em segundo plano</h3>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant={runInBackground ? "default" : "outline"}
+            onClick={() => void updateRunInBackgroundPreference(!runInBackground)}
+            aria-pressed={runInBackground}
+          >
+            {runInBackground ? "Ativado" : "Ativar"}
+          </Button>
+        </div>
       </section>
 
       {isEditingShortcut ? (
@@ -360,6 +406,10 @@ export function SettingsPage() {
             <p className="mt-1 text-sm text-muted-foreground">
               OCR, IA e imagens usam chaves pessoais salvas apenas neste computador.
             </p>
+            <p className="mt-2 max-w-2xl text-xs leading-5 text-muted-foreground">
+              Ao usar captura, tradução ou imagens, o Yocab pode enviar a imagem capturada, o texto
+              reconhecido ou termos de busca para OCR.space, Gemini, Pexels e Wikipedia.
+            </p>
           </div>
           <Button
             variant="outline"
@@ -404,10 +454,26 @@ export function SettingsPage() {
                   <ExternalLink className="size-4" aria-hidden="true" />
                   Guia das chaves
                 </Button>
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={() => setShowProviderKeys((isVisible) => !isVisible)}
+                  aria-pressed={showProviderKeys}
+                >
+                  {showProviderKeys ? (
+                    <EyeOff className="size-4" aria-hidden="true" />
+                  ) : (
+                    <Eye className="size-4" aria-hidden="true" />
+                  )}
+                  {showProviderKeys ? "Ocultar chaves" : "Mostrar chaves"}
+                </Button>
               </div>
               <div className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_140px]">
                 <input
                   className="field w-full"
+                  type={showProviderKeys ? "text" : "password"}
+                  autoComplete="off"
+                  spellCheck={false}
                   value={ocrSpaceApiKey}
                   onChange={(event) => setOcrSpaceApiKey(event.currentTarget.value)}
                   placeholder="Chave do OCR.space"
@@ -416,6 +482,9 @@ export function SettingsPage() {
                 <div className="hidden xl:block" />
                 <input
                   className="field w-full"
+                  type={showProviderKeys ? "text" : "password"}
+                  autoComplete="off"
+                  spellCheck={false}
                   value={geminiApiKey}
                   onChange={(event) => setGeminiApiKey(event.currentTarget.value)}
                   placeholder="Chave do Gemini"
@@ -424,6 +493,9 @@ export function SettingsPage() {
                 <div className="hidden xl:block" />
                 <input
                   className="field w-full"
+                  type={showProviderKeys ? "text" : "password"}
+                  autoComplete="off"
+                  spellCheck={false}
                   value={pexelsApiKey}
                   onChange={(event) => setPexelsApiKey(event.currentTarget.value)}
                   placeholder="Chave do Pexels"

@@ -23,6 +23,7 @@ pub async fn lookup_text(
 
     let app_handle_for_lookup = app_handle.clone();
     let text = request.text;
+    // Essa consulta externa roda fora do comando Tauri para o popup abrir rapido e a UI nao travar
     tauri::async_runtime::spawn(async move {
         let state = app_handle_for_lookup.state::<AppState>();
         let result = match lookup_service::lookup_text(&state.db, &text).await {
@@ -199,6 +200,7 @@ pub fn close_lookup_popup(window: WebviewWindow) -> Result<(), AppError> {
 
 fn open_lookup_popup(app_handle: &AppHandle, query: &str) -> AppResult<()> {
     if let Some(window) = app_handle.get_webview_window(LOOKUP_POPUP_LABEL) {
+        // Reusar a janela evita acumular popups antigos quando o usuario consulta varias vezes.
         window.show()?;
         window.set_focus()?;
         return Ok(());
@@ -210,8 +212,8 @@ fn open_lookup_popup(app_handle: &AppHandle, query: &str) -> AppResult<()> {
         WebviewUrl::App(format!("index.html#/lookup-popup?query={}", url_encode(query)).into()),
     )
     .title("Consulta")
-    .inner_size(420.0, 540.0)
-    .min_inner_size(360.0, 420.0)
+    .inner_size(640.0, 680.0)
+    .min_inner_size(520.0, 560.0)
     .decorations(true)
     .resizable(true)
     .always_on_top(false)

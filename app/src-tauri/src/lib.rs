@@ -64,7 +64,15 @@ pub fn run() {
                 ocr_in_progress: Default::default(),
             };
             app.manage(state);
+            services::system_tray_service::setup_tray(app)?;
+            // Capturas sao arquivos temporarios usados pelo OCR; dados de estudo ficam no SQLite.
+            if let Err(error) =
+                providers::capture::xcap_capture_provider::cleanup_old_captures(app.handle())
+            {
+                technical_log_service::log_error(app.handle(), "startup.capture_cleanup", &error);
+            }
             let state = app.state::<AppState>();
+            // O atalho precisa ser registrado ja na inicializacao para funcionar em segundo plano
             if let Err(error) = services::capture_service::register_capture_shortcut(
                 app.handle(),
                 &state,
@@ -108,6 +116,7 @@ pub fn run() {
             upsert_setting,
             list_settings
         ])
+        .on_window_event(services::system_tray_service::handle_main_window_event)
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

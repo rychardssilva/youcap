@@ -223,7 +223,7 @@ fn begin_capture(state: &AppState) -> AppResult<()> {
     if *capture_in_progress {
         return Err(AppError::new(
             "capture_in_progress",
-            "Uma captura ja esta em andamento.",
+            "Uma captura já está em andamento.",
         ));
     }
 

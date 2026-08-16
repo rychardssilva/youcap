@@ -1,4 +1,12 @@
-import { type ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ChangeEvent,
+  type ClipboardEvent as ReactClipboardEvent,
+  FormEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Bold,
   ArrowLeft,
@@ -118,10 +126,11 @@ export function NotesPage() {
         setDetails(nextDetails);
         const parsedNote = parseNote(nextDetails.personal_notes[0]?.note ?? "");
         setTagsInput(tagsToInput(nextDetails.tags.map((tag) => tag.name)) || parsedNote.tags);
-        setNoteInput(parsedNote.body);
+        const safeNoteBody = sanitizeNoteHtml(parsedNote.body);
+        setNoteInput(safeNoteBody);
         window.requestAnimationFrame(() => {
           if (editorRef.current) {
-            editorRef.current.innerHTML = noteToEditorHtml(parsedNote.body);
+            editorRef.current.innerHTML = noteToEditorHtml(safeNoteBody);
           }
         });
         setSentenceInput(nextDetails.personal_sentences[0]?.original_text ?? "");
@@ -174,7 +183,7 @@ export function NotesPage() {
   }
 
   function syncEditor() {
-    setNoteInput(editorRef.current?.innerHTML ?? "");
+    setNoteInput(sanitizeNoteHtml(editorRef.current?.innerHTML ?? ""));
   }
 
   function saveEditorSelection() {
@@ -369,10 +378,20 @@ export function NotesPage() {
       return;
     }
 
+    const safeUrl = normalizeSafeExternalUrl(url);
+    if (!safeUrl) {
+      addToast({
+        variant: "error",
+        title: "Link inválido",
+        description: "Use apenas links http, https ou mailto.",
+      });
+      return;
+    }
+
     wrapSelection("a", (element) => {
-      element.setAttribute("href", url.trim());
+      element.setAttribute("href", safeUrl);
       element.setAttribute("target", "_blank");
-      element.setAttribute("rel", "noreferrer");
+      element.setAttribute("rel", "noopener noreferrer");
     });
   }
 
@@ -424,6 +443,49 @@ export function NotesPage() {
       });
     };
     reader.readAsDataURL(file);
+  }
+
+  function handleEditorPaste(event: ReactClipboardEvent<HTMLDivElement>) {
+    event.preventDefault();
+
+    const html = event.clipboardData.getData("text/html");
+    const text = event.clipboardData.getData("text/plain");
+    const content = html
+      ? sanitizeNoteHtml(html)
+      : escapeHtml(text).replace(/\r?\n/g, "<br>");
+
+    if (!content) {
+      return;
+    }
+
+    insertSafeHtmlAtSelection(content);
+  }
+
+  function insertSafeHtmlAtSelection(html: string) {
+    const range = activeEditorRange();
+    if (!range) {
+      return;
+    }
+
+    const template = document.createElement("template");
+    template.innerHTML = sanitizeNoteHtml(html);
+    const fragment = template.content;
+    const lastNode = fragment.lastChild;
+
+    range.deleteContents();
+    range.insertNode(fragment);
+
+    if (lastNode) {
+      const selection = window.getSelection();
+      const nextRange = document.createRange();
+      nextRange.setStartAfter(lastNode);
+      nextRange.collapse(true);
+      selection?.removeAllRanges();
+      selection?.addRange(nextRange);
+      savedSelectionRef.current = nextRange.cloneRange();
+    }
+
+    syncEditor();
   }
 
   function openNotebookPage(wordId: string) {
@@ -609,6 +671,7 @@ export function NotesPage() {
                 data-placeholder="Escreva observações, comentários, listas, links, imagens e destaques..."
                 onInput={syncEditor}
                 onBlur={syncEditor}
+                onPaste={handleEditorPaste}
                 onKeyUp={saveEditorSelection}
                 onMouseUp={saveEditorSelection}
                 role="textbox"
@@ -832,10 +895,155 @@ function parseNote(note: string): ParsedNote {
 
 function noteToEditorHtml(note: string) {
   if (/<(h1|h2|h3|p|ul|ol|li|strong|b|mark|a|img|br)\b/i.test(note)) {
-    return note;
+    return sanitizeNoteHtml(note);
   }
 
-  return escapeHtml(note).replace(/\r?\n/g, "<br>");
+  return sanitizeNoteHtml(escapeHtml(note).replace(/\r?\n/g, "<br>"));
+}
+
+function sanitizeNoteHtml(html: string) {
+  if (!html.trim()) {
+    return "";
+  }
+
+  // O caderno aceita HTML local, mas mantemos uma lista pequena para evitar scripts e iframes.
+  const template = document.createElement("template");
+  template.innerHTML = html;
+  sanitizeNode(template.content);
+  return template.innerHTML;
+}
+
+const allowedNoteTags = new Set([
+  "A",
+  "B",
+  "BR",
+  "DIV",
+  "H2",
+  "IMG",
+  "LI",
+  "MARK",
+  "OL",
+  "P",
+  "SPAN",
+  "STRONG",
+  "UL",
+]);
+
+const blockedNoteTags = new Set([
+  "SCRIPT",
+  "STYLE",
+  "IFRAME",
+  "OBJECT",
+  "EMBED",
+  "LINK",
+  "META",
+  "FORM",
+  "INPUT",
+  "BUTTON",
+]);
+
+function sanitizeNode(parent: Node) {
+  for (const child of Array.from(parent.childNodes)) {
+    if (child.nodeType === Node.TEXT_NODE) {
+      continue;
+    }
+
+    if (!(child instanceof HTMLElement)) {
+      child.remove();
+      continue;
+    }
+
+    const tagName = child.tagName.toUpperCase();
+
+    if (blockedNoteTags.has(tagName)) {
+      child.remove();
+      continue;
+    }
+
+    if (!allowedNoteTags.has(tagName)) {
+      child.replaceWith(...Array.from(child.childNodes));
+      sanitizeNode(parent);
+      continue;
+    }
+
+    sanitizeElementAttributes(child);
+    sanitizeNode(child);
+  }
+}
+
+function sanitizeElementAttributes(element: HTMLElement) {
+  const tagName = element.tagName.toUpperCase();
+  const href = element.getAttribute("href");
+  const src = element.getAttribute("src");
+  const alt = element.getAttribute("alt");
+
+  for (const attribute of Array.from(element.attributes)) {
+    element.removeAttribute(attribute.name);
+  }
+
+  if (tagName === "A") {
+    const safeHref = normalizeSafeExternalUrl(href ?? "");
+    if (safeHref) {
+      element.setAttribute("href", safeHref);
+      element.setAttribute("target", "_blank");
+      element.setAttribute("rel", "noopener noreferrer");
+    }
+  }
+
+  if (tagName === "IMG") {
+    const safeSrc = normalizeSafeImageSrc(src ?? "");
+    if (safeSrc) {
+      element.setAttribute("src", safeSrc);
+      element.setAttribute("alt", alt?.slice(0, 160) || "Imagem inserida no caderno");
+    } else {
+      element.remove();
+    }
+  }
+}
+
+function normalizeSafeExternalUrl(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const withProtocol =
+    /^[a-z][a-z0-9+.-]*:/i.test(trimmed) || trimmed.startsWith("#")
+      ? trimmed
+      : `https://${trimmed}`;
+
+  try {
+    const url = new URL(withProtocol);
+    if (["http:", "https:", "mailto:"].includes(url.protocol)) {
+      return url.toString();
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+function normalizeSafeImageSrc(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (/^data:image\/(png|jpeg|jpg|gif|webp);base64,/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol === "https:" || url.protocol === "http:") {
+      return url.toString();
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
 }
 
 function escapeHtml(value: string) {

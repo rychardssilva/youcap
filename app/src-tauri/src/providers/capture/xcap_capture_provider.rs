@@ -1,4 +1,8 @@
-use std::{env, fs, path::PathBuf};
+use std::{
+    env, fs,
+    path::PathBuf,
+    time::{Duration, SystemTime},
+};
 
 use image::{
     codecs::png::{CompressionType, FilterType, PngEncoder},
@@ -14,10 +18,14 @@ use crate::{
 };
 
 const MIN_CAPTURE_SIZE: u32 = 8;
+// Pequena margem que melhora o OCR quando a selecao fica rente ao texto
 const OCR_SELECTION_PADDING: u32 = 12;
+// Apenas imagens temporarias de captura sao removidas, o vocabulario salvo nao depende delas
+const CAPTURE_RETENTION: Duration = Duration::from_secs(60 * 60 * 24);
 
 pub fn create_capture_session(app_handle: &AppHandle) -> AppResult<CaptureSession> {
     let monitor = target_monitor()?;
+    // Captura o monitor inteiro primeiro para o overlay selecionar sem mostrar a janela do app
     let image = monitor
         .capture_image()
         .map_err(|error| AppError::new("capture_error", error.to_string()))?;
@@ -92,6 +100,38 @@ pub fn capture_region_from_session(
     })
 }
 
+pub fn cleanup_old_captures(app_handle: &AppHandle) -> AppResult<()> {
+    let captures_dir = capture_dir(app_handle)?;
+    if !captures_dir.exists() {
+        return Ok(());
+    }
+
+    let now = SystemTime::now();
+    for entry in fs::read_dir(captures_dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if !path.is_file() || !is_generated_capture_file(&path) {
+            continue;
+        }
+
+        let Ok(metadata) = entry.metadata() else {
+            continue;
+        };
+        let Ok(modified_at) = metadata.modified() else {
+            continue;
+        };
+        let Ok(age) = now.duration_since(modified_at) else {
+            continue;
+        };
+
+        if age > CAPTURE_RETENTION {
+            let _ = fs::remove_file(path);
+        }
+    }
+
+    Ok(())
+}
+
 fn save_dynamic_png_fast(path: &PathBuf, image: &DynamicImage) -> AppResult<()> {
     let rgba = image.to_rgba8();
     save_rgba_png_fast(path, &rgba)
@@ -114,6 +154,7 @@ fn save_rgba_png_fast(path: &PathBuf, image: &RgbaImage) -> AppResult<()> {
 
 fn target_monitor() -> AppResult<Monitor> {
     if let Some((x, y)) = cursor_position() {
+        // O monitor do cursor evita recortes errados em setups com DPI ou monitores diferentes
         if let Ok(monitor) = Monitor::from_point(x, y) {
             return Ok(monitor);
         }
@@ -175,4 +216,13 @@ fn capture_dir(app_handle: &AppHandle) -> AppResult<PathBuf> {
     } else {
         Ok(app_handle.path().app_data_dir()?.join("captures"))
     }
+}
+
+fn is_generated_capture_file(path: &std::path::Path) -> bool {
+    let Some(file_name) = path.file_name().and_then(|name| name.to_str()) else {
+        return false;
+    };
+
+    (file_name.starts_with("capture_") || file_name.starts_with("session_"))
+        && file_name.ends_with(".png")
 }
